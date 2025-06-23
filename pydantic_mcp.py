@@ -5,7 +5,14 @@ from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.messages import ModelMessage
+from pydantic_ai.messages import (
+    ModelMessage,
+    ToolCallPart,
+    UserPromptPart,
+    SystemPromptPart,
+    TextPart,
+    ToolReturnPart,
+)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -56,9 +63,7 @@ class ConversationAgent:
             The agent's response as a string
         """
         # Run the query with existing message history
-        result = await self.agent.run(
-            query, message_history=self.message_history
-        )
+        result = await self.agent.run(query, message_history=self.message_history)
 
         # Add all new messages to history
         self.message_history = result.all_messages()
@@ -83,8 +88,20 @@ async def main():
         response2 = await agent.run_query("What is that number divided by 365?")
         print(f"Response 2: {response2}")
 
-        # Show message count
-        print(f"\nTotal messages in conversation: {len(agent.get_messages())}")
+        messages = agent.get_messages()
+        for i, message in enumerate(messages, 1):
+            for part in message.parts:
+                if isinstance(part, ToolCallPart):
+                    print(f"Tool call: {part.tool_name}")
+                    print(f"Tool call args: {part.args}")
+                elif isinstance(part, UserPromptPart):
+                    print(f"User prompt: {part.content}")
+                elif isinstance(part, SystemPromptPart):
+                    print(f"System prompt: {part.content}")
+                elif isinstance(part, TextPart):
+                    print(f"Text part: {part.content}")
+                elif isinstance(part, ToolReturnPart):
+                    print(f"Tool return: {part.content}")
 
 
 if __name__ == "__main__":
