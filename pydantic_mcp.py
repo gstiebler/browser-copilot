@@ -38,7 +38,11 @@ class ConversationAgent:
         )
 
         # Initialize the agent with MCP server
-        self.agent = Agent(self.model, mcp_servers=self.servers)
+        self.agent = Agent(
+            self.model,
+            mcp_servers=self.servers,
+            system_prompt="You are a helpful agent that interacts with the browser in behalf of the user.",
+        )
 
         # Store conversation history
         self.message_history: List[ModelMessage] = []
