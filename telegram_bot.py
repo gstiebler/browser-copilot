@@ -4,7 +4,7 @@ import logging
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-
+from pydantic_mcp import ConversationAgent
 
 class TelegramBot:
     """A simple Telegram bot that echoes messages and responds to commands."""
@@ -25,8 +25,14 @@ class TelegramBot:
         # Create application
         self.application = Application.builder().token(self.token).build()
         
+        self.agent = ConversationAgent()
+        
         # Set up handlers
         self._setup_handlers()
+        
+        # Set up startup/shutdown handlers
+        self.application.post_init = self.startup
+        self.application.post_shutdown = self.shutdown
     
     def _setup_logging(self) -> None:
         """Configure logging for the bot."""
@@ -45,7 +51,7 @@ class TelegramBot:
         
         # Message handler for non-command messages
         self.application.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self.echo_message_handler)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self.message_handler)
         )
         
         # Error handler
@@ -86,13 +92,25 @@ You can also send me any message and I'll echo it back to you!
                 "Please provide some text to echo!\nExample: /echo Hello World"
             )
     
-    async def echo_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Echo regular text messages."""
         await update.message.reply_text(f"You said: {update.message.text}")
+        response = await self.agent.run_query(update.message.text)
+        await update.message.reply_text(response)
     
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Log errors caused by updates."""
         self.logger.error("Exception while handling an update:", exc_info=context.error)
+    
+    async def startup(self, application: Application) -> None:
+        """Initialize the agent and start MCP servers on startup."""
+        await self.agent.__aenter__()
+        self.logger.info("MCP servers started successfully")
+    
+    async def shutdown(self, application: Application) -> None:
+        """Cleanup agent and stop MCP servers on shutdown."""
+        await self.agent.__aexit__(None, None, None)
+        self.logger.info("MCP servers stopped")
     
     def run(self) -> None:
         """Start the bot and run until interrupted."""
