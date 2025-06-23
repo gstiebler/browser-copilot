@@ -18,7 +18,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL")
+OPENROUTER_MODEL = "anthropic/claude-sonnet-4"
+print(OPENROUTER_MODEL)
 
 
 class ConversationAgent:
@@ -80,6 +81,23 @@ class ConversationAgent:
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
         return self.message_history.copy()
+    
+    def print_messages(self):
+        """Print the messages in the conversation history."""
+        messages = self.get_messages()
+        for i, message in enumerate(messages, 1):
+            for part in message.parts:
+                if isinstance(part, ToolCallPart):
+                    print(f"Tool call: {part.tool_name}")
+                    print(f"Tool call args: {part.args}")
+                elif isinstance(part, UserPromptPart):
+                    print(f"User prompt: {part.content}")
+                elif isinstance(part, SystemPromptPart):
+                    print(f"System prompt: {part.content}")
+                elif isinstance(part, TextPart):
+                    print(f"Text part: {part.content}")
+                elif isinstance(part, ToolReturnPart):
+                    print(f"Tool return: {part.content}")
 
 
 async def main():
@@ -95,20 +113,7 @@ async def main():
         response2 = await agent.run_query("What is that number divided by 365?")
         print(f"Response 2: {response2}")
 
-        messages = agent.get_messages()
-        for i, message in enumerate(messages, 1):
-            for part in message.parts:
-                if isinstance(part, ToolCallPart):
-                    print(f"Tool call: {part.tool_name}")
-                    print(f"Tool call args: {part.args}")
-                elif isinstance(part, UserPromptPart):
-                    print(f"User prompt: {part.content}")
-                elif isinstance(part, SystemPromptPart):
-                    print(f"System prompt: {part.content}")
-                elif isinstance(part, TextPart):
-                    print(f"Text part: {part.content}")
-                elif isinstance(part, ToolReturnPart):
-                    print(f"Tool return: {part.content}")
+        agent.print_messages()
 
 
 if __name__ == "__main__":
