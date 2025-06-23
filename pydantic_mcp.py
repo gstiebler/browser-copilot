@@ -26,7 +26,10 @@ class ConversationAgent:
 
     def __init__(self):
         """Initialize the agent with model and MCP server configuration."""
-        self.server = MCPServerStdio("uvx", args=["mcp-server-calculator"])
+        self.servers = [
+            MCPServerStdio("uvx", args=["mcp-server-calculator"]),
+            MCPServerStdio("npx", args=["@playwright/mcp@latest"]),
+        ]
 
         # Initialize the model
         self.model = OpenAIModel(
@@ -35,7 +38,7 @@ class ConversationAgent:
         )
 
         # Initialize the agent with MCP server
-        self.agent = Agent(self.model, mcp_servers=[self.server])
+        self.agent = Agent(self.model, mcp_servers=self.servers)
 
         # Store conversation history
         self.message_history: List[ModelMessage] = []
