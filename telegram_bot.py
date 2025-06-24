@@ -94,9 +94,8 @@ You can also send me any message and I'll echo it back to you!
     
     async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Echo regular text messages."""
-        await update.message.reply_text(f"You said: {update.message.text}")
-        response = await self.agent.run_query(update.message.text)
-        await update.message.reply_text(response)
+        async for chunk in self.agent.run_query(update.message.text):
+            await update.message.reply_text(chunk)
     
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Log errors caused by updates."""

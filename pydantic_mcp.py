@@ -1,7 +1,7 @@
 import asyncio
 import os
-from typing import List
-from pydantic_ai import Agent
+from typing import List, AsyncGenerator
+from pydantic_ai import Agent, CallToolsNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -75,23 +75,28 @@ class ConversationAgent:
         if self.mcp_context:
             await self.mcp_context.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def run_query(self, query: str) -> str:
+    async def run_query(self, query: str) -> AsyncGenerator[str, None]:
         """
-        Run a query and store the messages in history.
+        Run a query and store the messages in history, yielding intermediate results.
 
         Args:
             query: The user's query
 
-        Returns:
-            The agent's response as a string
+        Yields:
+            Intermediate messages and final response
         """
         # Run the query with existing message history
-        result = await self.agent.run(query, message_history=self.message_history)
+        async with self.agent.iter(
+            query, message_history=self.message_history
+        ) as agent_run:
+            async for node in agent_run:
+                if isinstance(node, CallToolsNode):
+                    parts = node.model_response.parts
 
-        # Add all new messages to history
-        self.message_history = result.all_messages()
+                    for part in parts:
+                        yield self.get_part_text(part)
 
-        return result.output
+            self.message_history = agent_run.result.all_messages()
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
@@ -100,33 +105,55 @@ class ConversationAgent:
     def print_messages(self):
         """Print the messages in the conversation history."""
         messages = self.get_messages()
-        for i, message in enumerate(messages, 1):
+        for message in messages:
             for part in message.parts:
-                if isinstance(part, ToolCallPart):
-                    print(f"Tool call: {part.tool_name}")
-                    print(f"Tool call args: {part.args}")
-                elif isinstance(part, UserPromptPart):
-                    print(f"User prompt: {part.content}")
-                elif isinstance(part, SystemPromptPart):
-                    print(f"System prompt: {part.content}")
-                elif isinstance(part, TextPart):
-                    print(f"Text part: {part.content}")
-                elif isinstance(part, ToolReturnPart):
-                    print(f"Tool return: {part.content}")
+                self.print_part(part)
+
+    def print_part(self, part):
+        if isinstance(part, ToolCallPart):
+            print(f"Tool call: {part.tool_name}")
+            print(f"Tool call args: {part.args}")
+        elif isinstance(part, UserPromptPart):
+            print(f"User prompt: {part.content}")
+        elif isinstance(part, SystemPromptPart):
+            print(f"System prompt: {part.content}")
+        elif isinstance(part, TextPart):
+            print(f"Text part: {part.content}")
+        elif isinstance(part, ToolReturnPart):
+            print(f"Tool return: {part.content}")
+
+    def get_part_text(self, part):
+        if isinstance(part, ToolCallPart):
+            return f"Tool call: {part.tool_name}\nTool call args: {part.args}"
+        elif isinstance(part, UserPromptPart):
+            return part.content
+        elif isinstance(part, SystemPromptPart):
+            return part.content
+        elif isinstance(part, TextPart):
+            return part.content
+        elif isinstance(part, ToolReturnPart):
+            return part.content
 
 
 async def main():
     # Create a conversation agent
     async with ConversationAgent() as agent:
         # First query
-        response1 = await agent.run_query(
+        print("Response 1:")
+        async for chunk in agent.run_query(
             "How many days between 2000-01-01 and 2025-03-18?"
-        )
-        print(f"Response 1: {response1}")
+        ):
+            print(chunk, end="", flush=True)
+            print()
+        print()
 
         # Second query that references the first
-        response2 = await agent.run_query("What is that number divided by 365?")
-        print(f"Response 2: {response2}")
+        print("Response 2:")
+        async for chunk in agent.run_query("What is that number divided by 365?"):
+            print(chunk, end="", flush=True)
+            print()
+
+        print()
 
         agent.print_messages()
 
