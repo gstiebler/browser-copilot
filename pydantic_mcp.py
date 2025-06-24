@@ -14,11 +14,18 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from dotenv import load_dotenv
+import logfire
 
 load_dotenv()
 
+
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = "anthropic/claude-sonnet-4"
+LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN")
+
+logfire.configure(token=LOGFIRE_TOKEN)
+logfire.instrument_pydantic_ai()
+
 print(OPENROUTER_MODEL)
 
 
@@ -113,7 +120,7 @@ async def main():
     async with ConversationAgent() as agent:
         # First query
         response1 = await agent.run_query(
-            "What are the MCP tools available?"
+            "How many days between 2000-01-01 and 2025-03-18?"
         )
         print(f"Response 1: {response1}")
 

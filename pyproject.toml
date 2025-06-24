@@ -10,6 +10,7 @@ dependencies = [
     "langchain-tavily>=0.2.4",
     "langchain[google-genai]>=0.3.26",
     "langgraph>=0.4.8",
+    "logfire>=3.21.1",
     "mcp[cli]>=1.9.4",
     "nest-asyncio>=1.6.0",
     "pydantic-ai>=0.3.2",
