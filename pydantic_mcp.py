@@ -30,6 +30,14 @@ class ConversationAgent:
         self.servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
             MCPServerStdio("npx", args=["@playwright/mcp@latest"]),
+            MCPServerStdio(
+                "uvx",
+                args=[
+                    "--from",
+                    "git+https://github.com/gstiebler/pdf-mcp-server.git",
+                    "pdf-mcp-server",
+                ],
+            ),
         ]
 
         # Initialize the model
@@ -81,7 +89,7 @@ class ConversationAgent:
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
         return self.message_history.copy()
-    
+
     def print_messages(self):
         """Print the messages in the conversation history."""
         messages = self.get_messages()
@@ -105,7 +113,7 @@ async def main():
     async with ConversationAgent() as agent:
         # First query
         response1 = await agent.run_query(
-            "How many days between 2000-01-01 and 2025-03-18?"
+            "What are the MCP tools available?"
         )
         print(f"Response 1: {response1}")
 
