@@ -20,13 +20,13 @@ load_dotenv()
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "anthropic/claude-sonnet-4"
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL")
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN")
 
 logfire.configure(token=LOGFIRE_TOKEN)
 logfire.instrument_pydantic_ai()
 
-print(OPENROUTER_MODEL)
+print(f"Using model: {OPENROUTER_MODEL}")
 
 
 class ConversationAgent:
@@ -34,6 +34,7 @@ class ConversationAgent:
 
     def __init__(self):
         """Initialize the agent with model and MCP server configuration."""
+        user_home = os.path.expanduser("~")
         self.servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
             MCPServerStdio("npx", args=["@playwright/mcp@latest"]),
@@ -43,6 +44,18 @@ class ConversationAgent:
                     "--from",
                     "git+https://github.com/gstiebler/pdf-mcp-server.git",
                     "pdf-mcp-server",
+                ],
+            ),
+            MCPServerStdio(
+                "npx",
+                args=["-y", "@modelcontextprotocol/server-memory"],
+                env={"MEMORY_FILE_PATH": f"{user_home}/Documents/datas/ai_memory.json"},
+            ),
+            MCPServerStdio(
+                "npx",
+                args=[
+                    "@modelcontextprotocol/server-filesystem",
+                    f"{user_home}/Documents/temp",
                 ],
             ),
         ]
