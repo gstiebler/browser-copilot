@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from typing import List, AsyncGenerator
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode
@@ -39,7 +40,9 @@ class ConversationAgent:
         """Initialize the agent with model and MCP server configuration."""
         mcp_servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
-            MCPServerStdio("npx", args=["@playwright/mcp@latest"]),
+            MCPServerStdio(
+                "npx", args=["@playwright/mcp@latest", "--output-dir", TEMP_FOLDER]
+            ),
             MCPServerStdio(
                 "uvx",
                 args=[
@@ -55,12 +58,7 @@ class ConversationAgent:
             ),
             MCPServerStdio(
                 "npx",
-                args=[
-                    "@modelcontextprotocol/server-filesystem",
-                    TEMP_FOLDER,
-                    "/var",
-                    "/tmp",
-                ],
+                args=["@modelcontextprotocol/server-filesystem", TEMP_FOLDER],
             ),
         ]
 
@@ -106,17 +104,22 @@ class ConversationAgent:
         async with self.agent.iter(
             query, message_history=self.message_history
         ) as agent_run:
+            last_tool_call = None
             async for node in agent_run:
                 if isinstance(node, CallToolsNode):
                     parts = node.model_response.parts
-
                     for part in parts:
-                        yield self.get_part_text(part)
+                        if isinstance(part, ToolCallPart):
+                            last_tool_call = part
+                        yield {"type": "text", "text": self.get_part_text(part)}
                 elif isinstance(node, ModelRequestNode):
                     parts = node.request.parts
                     for part in parts:
-                        if isinstance(part, UserPromptPart):
-                            print(f"User prompt: {part.content}")
+                        if isinstance(part, ToolReturnPart) and part.tool_name == last_tool_call.tool_name == "browser_take_screenshot":
+                            print(f"screenshot args: {last_tool_call.args}")
+                            parsed_args = json.loads(last_tool_call.args)
+                            result = {"type": "image", "filename": f"{TEMP_FOLDER}/{parsed_args['filename']}"}
+                            yield result
 
             self.message_history = agent_run.result.all_messages()
 
@@ -163,10 +166,7 @@ async def main():
         # First query
         print("Response 1:")
         async for chunk in agent.run_query(
-            f"""Open the google website, take a screenshot of the page and save it to the temp folder. 
-            You may need to move the file from /var to the temp folder. The temp folder is {TEMP_FOLDER}.
-            When moving the file, use the full path of the file both in 'destination' and 'source' arguments.
-            """
+            "Open the google website, take a screenshot of the page to the file screenshot.png"
         ):
             print(chunk, end="", flush=True)
             print()
