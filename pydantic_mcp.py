@@ -1,7 +1,7 @@
 import asyncio
 import os
 from typing import List, AsyncGenerator
-from pydantic_ai import Agent, CallToolsNode
+from pydantic_ai import Agent, CallToolsNode, ModelRequestNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -28,14 +28,16 @@ logfire.instrument_pydantic_ai()
 
 print(f"Using model: {OPENROUTER_MODEL}")
 
+user_home = os.path.expanduser("~")
+TEMP_FOLDER = f"{user_home}/Documents/temp"
+
 
 class ConversationAgent:
     """A conversational agent that maintains message history across interactions."""
 
     def __init__(self):
         """Initialize the agent with model and MCP server configuration."""
-        user_home = os.path.expanduser("~")
-        self.servers = [
+        mcp_servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
             MCPServerStdio("npx", args=["@playwright/mcp@latest"]),
             MCPServerStdio(
@@ -55,7 +57,9 @@ class ConversationAgent:
                 "npx",
                 args=[
                     "@modelcontextprotocol/server-filesystem",
-                    f"{user_home}/Documents/temp",
+                    TEMP_FOLDER,
+                    "/var",
+                    "/tmp",
                 ],
             ),
         ]
@@ -69,7 +73,7 @@ class ConversationAgent:
         # Initialize the agent with MCP server
         self.agent = Agent(
             self.model,
-            mcp_servers=self.servers,
+            mcp_servers=mcp_servers,
             system_prompt="You are a helpful agent that interacts with the browser in behalf of the user.",
         )
 
@@ -108,6 +112,11 @@ class ConversationAgent:
 
                     for part in parts:
                         yield self.get_part_text(part)
+                elif isinstance(node, ModelRequestNode):
+                    parts = node.request.parts
+                    for part in parts:
+                        if isinstance(part, UserPromptPart):
+                            print(f"User prompt: {part.content}")
 
             self.message_history = agent_run.result.all_messages()
 
@@ -154,21 +163,14 @@ async def main():
         # First query
         print("Response 1:")
         async for chunk in agent.run_query(
-            "How many days between 2000-01-01 and 2025-03-18?"
+            f"""Open the google website, take a screenshot of the page and save it to the temp folder. 
+            You may need to move the file from /var to the temp folder. The temp folder is {TEMP_FOLDER}.
+            When moving the file, use the full path of the file both in 'destination' and 'source' arguments.
+            """
         ):
             print(chunk, end="", flush=True)
             print()
         print()
-
-        # Second query that references the first
-        print("Response 2:")
-        async for chunk in agent.run_query("What is that number divided by 365?"):
-            print(chunk, end="", flush=True)
-            print()
-
-        print()
-
-        agent.print_messages()
 
 
 if __name__ == "__main__":
