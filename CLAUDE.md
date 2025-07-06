@@ -30,7 +30,7 @@ python pydantic_mcp.py
    - Handles user messages and commands
    - Integrates with ConversationAgent for AI-powered responses
    - Manages lifecycle of MCP servers
-
+`
 2. **pydantic_mcp.py**: AI Agent implementation
    - ConversationAgent class manages conversation history
    - Integrates multiple MCP servers (calculator, browser automation, PDF, memory, filesystem)

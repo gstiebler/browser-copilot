@@ -11,3 +11,7 @@ wheels/
 
 .env
 .claude
+.envrc
+.serena
+.mypy_cache
+.ruff_cache
