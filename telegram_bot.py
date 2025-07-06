@@ -60,14 +60,16 @@ class TelegramBot:
     async def start_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Send a welcome message when the command /start is issued."""
         user = update.effective_user
-        await update.message.reply_html(
-            f"Hi {user.mention_html()}! 👋\n\n"
-            "I'm a simple Telegram bot. Here's what I can do:\n"
-            "• /start - Show this welcome message\n"
-            "• /help - Show available commands\n"
-            "• /echo <text> - Echo back your message\n"
-            "• Send me any text and I'll echo it back!"
-        )
+        if update.message:
+            user_mention = user.mention_html() if user else "there"
+            await update.message.reply_html(
+                f"Hi {user_mention}! 👋\n\n"
+                "I'm a simple Telegram bot. Here's what I can do:\n"
+                "• /start - Show this welcome message\n"
+                "• /help - Show available commands\n"
+                "• /echo <text> - Echo back your message\n"
+                "• Send me any text and I'll echo it back!"
+            )
     
     async def help_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Send a help message when the command /help is issued."""
@@ -80,25 +82,28 @@ class TelegramBot:
 
 You can also send me any message and I'll echo it back to you!
 """
-        await update.message.reply_html(help_text)
+        if update.message:
+            await update.message.reply_html(help_text)
     
     async def echo_command_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Echo the user message with /echo command."""
-        if context.args:
-            text_to_echo = ' '.join(context.args)
-            await update.message.reply_text(f"Echo: {text_to_echo}")
-        else:
-            await update.message.reply_text(
-                "Please provide some text to echo!\nExample: /echo Hello World"
-            )
+        if update.message:
+            if context.args:
+                text_to_echo = ' '.join(context.args)
+                await update.message.reply_text(f"Echo: {text_to_echo}")
+            else:
+                await update.message.reply_text(
+                    "Please provide some text to echo!\nExample: /echo Hello World"
+                )
     
     async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Echo regular text messages."""
-        async for chunk in self.agent.run_query(update.message.text):
-            if chunk["type"] == "text":
-                await update.message.reply_text(chunk["text"])
-            elif chunk["type"] == "image":
-                await update.message.reply_photo(photo=chunk["filename"])
+        if update.message and update.message.text:
+            async for chunk in self.agent.run_query(update.message.text):
+                if chunk["type"] == "text":
+                    await update.message.reply_text(chunk["text"])
+                elif chunk["type"] == "image":
+                    await update.message.reply_photo(photo=chunk["filename"])
     
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Log errors caused by updates."""

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-from typing import List, AsyncGenerator
+from typing import List, AsyncGenerator, Union, Any
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
@@ -13,6 +13,8 @@ from pydantic_ai.messages import (
     SystemPromptPart,
     TextPart,
     ToolReturnPart,
+    RetryPromptPart,
+    ThinkingPart,
 )
 from dotenv import load_dotenv
 import logfire
@@ -20,9 +22,9 @@ import logfire
 load_dotenv()
 
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL")
-LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "")
+LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
 
 logfire.configure(token=LOGFIRE_TOKEN)
 logfire.instrument_pydantic_ai()
@@ -79,18 +81,18 @@ class ConversationAgent:
         self.message_history: List[ModelMessage] = []
         self.mcp_context = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "ConversationAgent":
         """Enter async context manager for MCP servers."""
         self.mcp_context = self.agent.run_mcp_servers()
         await self.mcp_context.__aenter__()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit async context manager for MCP servers."""
         if self.mcp_context:
             await self.mcp_context.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def run_query(self, query: str) -> AsyncGenerator[str, None]:
+    async def run_query(self, query: str) -> AsyncGenerator[dict, None]:
         """
         Run a query and store the messages in history, yielding intermediate results.
 
@@ -107,14 +109,12 @@ class ConversationAgent:
             last_tool_call = None
             async for node in agent_run:
                 if isinstance(node, CallToolsNode):
-                    parts = node.model_response.parts
-                    for part in parts:
+                    for part in node.model_response.parts:
                         if isinstance(part, ToolCallPart):
                             last_tool_call = part
                         yield {"type": "text", "text": self.get_part_text(part)}
                 elif isinstance(node, ModelRequestNode):
-                    parts = node.request.parts
-                    for part in parts:
+                    for part in node.request.parts:  # type: ignore[assignment]
                         if isinstance(part, ToolReturnPart) and part.tool_name == last_tool_call.tool_name == "browser_take_screenshot":
                             print(f"screenshot args: {last_tool_call.args}")
                             parsed_args = json.loads(last_tool_call.args)
@@ -134,7 +134,7 @@ class ConversationAgent:
             for part in message.parts:
                 self.print_part(part)
 
-    def print_part(self, part):
+    def print_part(self, part: Any) -> None:
         if isinstance(part, ToolCallPart):
             print(f"Tool call: {part.tool_name}")
             print(f"Tool call args: {part.args}")
@@ -147,17 +147,31 @@ class ConversationAgent:
         elif isinstance(part, ToolReturnPart):
             print(f"Tool return: {part.content}")
 
-    def get_part_text(self, part):
+    def get_part_text(self, part: Union[ToolCallPart, UserPromptPart, SystemPromptPart, TextPart, ToolReturnPart, RetryPromptPart, ThinkingPart]) -> str:
         if isinstance(part, ToolCallPart):
             return f"Tool call: {part.tool_name}\nTool call args: {part.args}"
         elif isinstance(part, UserPromptPart):
-            return part.content
+            content = part.content
+            if isinstance(content, str):
+                return content
+            else:
+                return str(content)
         elif isinstance(part, SystemPromptPart):
             return part.content
         elif isinstance(part, TextPart):
             return part.content
         elif isinstance(part, ToolReturnPart):
             return part.content
+        elif isinstance(part, RetryPromptPart):
+            content = part.content  # type: ignore[assignment]
+            if isinstance(content, str):
+                return content
+            else:
+                return str(content)
+        elif isinstance(part, ThinkingPart):
+            return part.content
+        else:
+            return ""
 
 
 async def main():
