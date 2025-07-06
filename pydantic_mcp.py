@@ -16,10 +16,7 @@ from pydantic_ai.messages import (
     RetryPromptPart,
     ThinkingPart,
 )
-from dotenv import load_dotenv
 import logfire
-
-load_dotenv()
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")

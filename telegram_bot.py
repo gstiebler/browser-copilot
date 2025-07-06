@@ -2,7 +2,6 @@
 import os
 import logging
 from datetime import datetime
-from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -19,8 +18,6 @@ class TelegramBot:
 
     def __init__(self):
         """Initialize the bot with configuration and logging."""
-        # Load environment variables
-        load_dotenv()
 
         # Set up logging
         self._setup_logging()
