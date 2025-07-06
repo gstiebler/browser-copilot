@@ -115,10 +115,19 @@ class ConversationAgent:
                         yield {"type": "text", "text": self.get_part_text(part)}
                 elif isinstance(node, ModelRequestNode):
                     for part in node.request.parts:  # type: ignore[assignment]
-                        if isinstance(part, ToolReturnPart) and part.tool_name == last_tool_call.tool_name == "browser_take_screenshot":
+                        if (
+                            isinstance(part, ToolReturnPart)
+                            and last_tool_call
+                            and part.tool_name
+                            == last_tool_call.tool_name
+                            == "browser_take_screenshot"
+                        ):
                             print(f"screenshot args: {last_tool_call.args}")
                             parsed_args = json.loads(last_tool_call.args)
-                            result = {"type": "image", "filename": f"{TEMP_FOLDER}/{parsed_args['filename']}"}
+                            result = {
+                                "type": "image",
+                                "filename": f"{TEMP_FOLDER}/{parsed_args['filename']}",
+                            }
                             yield result
 
             self.message_history = agent_run.result.all_messages()
@@ -147,7 +156,18 @@ class ConversationAgent:
         elif isinstance(part, ToolReturnPart):
             print(f"Tool return: {part.content}")
 
-    def get_part_text(self, part: Union[ToolCallPart, UserPromptPart, SystemPromptPart, TextPart, ToolReturnPart, RetryPromptPart, ThinkingPart]) -> str:
+    def get_part_text(
+        self,
+        part: Union[
+            ToolCallPart,
+            UserPromptPart,
+            SystemPromptPart,
+            TextPart,
+            ToolReturnPart,
+            RetryPromptPart,
+            ThinkingPart,
+        ],
+    ) -> str:
         if isinstance(part, ToolCallPart):
             return f"Tool call: {part.tool_name}\nTool call args: {part.args}"
         elif isinstance(part, UserPromptPart):
