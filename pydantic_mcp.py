@@ -42,9 +42,7 @@ class ConversationAgent:
         """Initialize the agent with model and MCP server configuration."""
         mcp_servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
-            MCPServerStdio(
-                "npx", args=["@playwright/mcp@latest", "--output-dir", TEMP_FOLDER]
-            ),
+            MCPServerStdio("npx", args=["@playwright/mcp@latest", "--output-dir", TEMP_FOLDER]),
             MCPServerStdio(
                 "uvx",
                 args=[
@@ -103,9 +101,7 @@ class ConversationAgent:
             Intermediate messages and final response
         """
         # Run the query with existing message history
-        async with self.agent.iter(
-            query, message_history=self.message_history
-        ) as agent_run:
+        async with self.agent.iter(query, message_history=self.message_history) as agent_run:
             last_tool_call = None
             async for node in agent_run:
                 if isinstance(node, CallToolsNode):

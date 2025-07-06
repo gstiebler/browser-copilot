@@ -64,9 +64,7 @@ class TelegramBot:
         # Error handler
         self.application.add_error_handler(self.error_handler)
 
-    async def start_handler(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    async def start_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Send a welcome message when the command /start is issued."""
         user = update.effective_user
         if update.message:
@@ -80,9 +78,7 @@ class TelegramBot:
                 "• Send me any text and I'll echo it back!"
             )
 
-    async def help_handler(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    async def help_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Send a help message when the command /help is issued."""
         help_text = """
 <b>Available commands:</b>
@@ -109,9 +105,7 @@ You can also send me any message and I'll echo it back to you!
                     "Please provide some text to echo!\nExample: /echo Hello World"
                 )
 
-    async def message_handler(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Echo regular text messages."""
         if update.message and update.message.text:
             async for chunk in self.agent.run_query(update.message.text):
@@ -120,9 +114,7 @@ You can also send me any message and I'll echo it back to you!
                 elif chunk["type"] == "image":
                     await update.message.reply_photo(photo=chunk["filename"])
 
-    async def error_handler(
-        self, update: object, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Log errors caused by updates."""
         self.logger.error("Exception while handling an update:", exc_info=context.error)
 
