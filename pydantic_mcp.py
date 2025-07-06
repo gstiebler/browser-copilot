@@ -119,14 +119,20 @@ class ConversationAgent:
                             == "browser_take_screenshot"
                         ):
                             print(f"screenshot args: {last_tool_call.args}")
-                            parsed_args = json.loads(last_tool_call.args)
+                            if isinstance(last_tool_call.args, str):
+                                parsed_args = json.loads(last_tool_call.args)
+                            elif isinstance(last_tool_call.args, dict):
+                                parsed_args = last_tool_call.args
+                            else:
+                                parsed_args = {}
                             result = {
                                 "type": "image",
-                                "filename": f"{TEMP_FOLDER}/{parsed_args['filename']}",
+                                "filename": f"{TEMP_FOLDER}/{parsed_args.get('filename', 'screenshot.png')}",
                             }
                             yield result
 
-            self.message_history = agent_run.result.all_messages()
+            if agent_run.result is not None:
+                self.message_history = agent_run.result.all_messages()
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
