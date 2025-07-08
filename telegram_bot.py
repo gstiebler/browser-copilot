@@ -69,34 +69,35 @@ class TelegramBot:
         """Send a welcome message when the command /start is issued."""
         user = update.effective_user
         if update.message:
-            user_mention = user.mention_html() if user else "there"
-            await update.message.reply_html(
-                f"Hi {user_mention}! 👋\n\n"
+            user_name = user.first_name if user else "there"
+            await update.message.reply_text(
+                f"Hi {user_name}! 👋\n\n"
                 "I'm a helpful AI assistant bot. Here's what I can do:\n"
                 "• /start - Show this welcome message\n"
                 "• /help - Show available commands\n"
-                "• /echo <text> - Echo back your message\n"
+                "• /echo `<text>` - Echo back your message\n"
                 "• Send me any text and I'll help you with it!\n"
-                "• Send me PDF files and I'll process them for you!"
+                "• Send me PDF files and I'll process them for you!",
+                parse_mode="Markdown",
             )
 
     async def help_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Send a help message when the command /help is issued."""
         help_text = """
-<b>Available commands:</b>
+*Available commands:*
 
 /start - Start the bot and see welcome message
 /help - Show this help message
-/echo <text> - Echo back your text
+/echo `<text>` - Echo back your text
 
-<b>What I can do:</b>
+*What I can do:*
 • Send me any text message and I'll help you with it!
 • Send me PDF files and I'll process them for you!
 • I can interact with web browsers and take screenshots
 • I can help with various tasks using AI assistance
 """
         if update.message:
-            await update.message.reply_html(help_text)
+            await update.message.reply_text(help_text, parse_mode="Markdown")
 
     async def echo_command_handler(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -116,7 +117,7 @@ class TelegramBot:
         if update.message and update.message.text:
             async for chunk in self.agent.run_query(update.message.text):
                 if chunk["type"] == "text":
-                    await update.message.reply_text(chunk["text"])
+                    await update.message.reply_text(chunk["text"], parse_mode="MarkdownV2")
                 elif chunk["type"] == "image":
                     await update.message.reply_photo(photo=chunk["filename"])
 
@@ -148,7 +149,7 @@ class TelegramBot:
                 # Process the response from the agent
                 async for chunk in self.agent.run_query(message):
                     if chunk["type"] == "text":
-                        await update.message.reply_text(chunk["text"])
+                        await update.message.reply_text(chunk["text"], parse_mode="MarkdownV2")
                     elif chunk["type"] == "image":
                         await update.message.reply_photo(photo=chunk["filename"])
 
