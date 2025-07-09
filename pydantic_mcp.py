@@ -54,6 +54,8 @@ class ConversationAgent:
                     "--from",
                     "git+https://github.com/gstiebler/h-memory-mcp-server.git",
                     "h-memory-mcp-server",
+                    "--memory-file",
+                    "memory.json",
                 ],
             ),
             MCPServerStdio(
