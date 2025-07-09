@@ -49,9 +49,12 @@ class ConversationAgent:
                 ],
             ),
             MCPServerStdio(
-                "npx",
-                args=["-y", "@modelcontextprotocol/server-memory"],
-                env={"MEMORY_FILE_PATH": f"{user_home}/Documents/datas/ai_memory.json"},
+                "uvx",
+                args=[
+                    "--from",
+                    "git+https://github.com/gstiebler/h-memory-mcp-server.git",
+                    "h-memory-mcp-server",
+                ],
             ),
             MCPServerStdio(
                 "npx",
