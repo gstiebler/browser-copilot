@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import logging
+import re
 from datetime import datetime
 from telegram import Update
 from telegram.ext import (
@@ -11,6 +12,22 @@ from telegram.ext import (
     ContextTypes,
 )
 from pydantic_mcp import ConversationAgent, TEMP_FOLDER
+
+
+def escape_markdown_v2(text: str) -> str:
+    """
+    Escape special characters for Telegram's MarkdownV2 parse mode.
+
+    According to Telegram docs, any character with code between 1 and 126
+    can be escaped with a preceding '\' character.
+    """
+    # Characters that need to be escaped in MarkdownV2
+    escape_chars = r"_*[]()~`>#+-=|{}.!"
+
+    # Escape each special character with a backslash
+    escaped_text = re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
+
+    return escaped_text
 
 
 class TelegramBot:
@@ -78,7 +95,7 @@ class TelegramBot:
                 "• /echo `<text>` - Echo back your message\n"
                 "• Send me any text and I'll help you with it!\n"
                 "• Send me PDF files and I'll process them for you!",
-                parse_mode="Markdown",
+                parse_mode="MarkdownV2",
             )
 
     async def help_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -97,7 +114,7 @@ class TelegramBot:
 • I can help with various tasks using AI assistance
 """
         if update.message:
-            await update.message.reply_text(help_text, parse_mode="Markdown")
+            await update.message.reply_text(help_text, parse_mode="MarkdownV2")
 
     async def echo_command_handler(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -117,7 +134,9 @@ class TelegramBot:
         if update.message and update.message.text:
             async for chunk in self.agent.run_query(update.message.text):
                 if chunk["type"] == "text":
-                    await update.message.reply_text(chunk["text"], parse_mode="MarkdownV2")
+                    logging.info(f"Received chunk: {chunk['text']}")
+                    escaped_text = escape_markdown_v2(chunk["text"])
+                    await update.message.reply_text(escaped_text, parse_mode="MarkdownV2")
                 elif chunk["type"] == "image":
                     await update.message.reply_photo(photo=chunk["filename"])
 
@@ -149,7 +168,8 @@ class TelegramBot:
                 # Process the response from the agent
                 async for chunk in self.agent.run_query(message):
                     if chunk["type"] == "text":
-                        await update.message.reply_text(chunk["text"], parse_mode="MarkdownV2")
+                        escaped_text = escape_markdown_v2(chunk["text"])
+                        await update.message.reply_text(escaped_text, parse_mode="MarkdownV2")
                     elif chunk["type"] == "image":
                         await update.message.reply_photo(photo=chunk["filename"])
 
