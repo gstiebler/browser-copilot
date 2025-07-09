@@ -72,7 +72,20 @@ class ConversationAgent:
         self.agent = Agent(
             self.model,
             mcp_servers=mcp_servers,
-            system_prompt="You are a helpful agent that interacts with the browser in behalf of the user.",
+            system_prompt="""You are a helpful agent that interacts with the browser in behalf of the user.
+You can open websites, take screenshots, and perform other tasks using the browser.
+You can also use tools like a calculator, PDF reader, and memory server to assist the user.
+You will receive user queries and respond with the appropriate actions or information.
+You will use the tools provided by the MCP servers to perform tasks.
+After each iteration, reflect if there's something useful that you should store in the memory server.
+Examples of useful information to store include:
+- Important URLs or web pages
+- Interactions with Playwright or other browser actions
+- User preferences
+- User informations that can be useful in future interactions
+- Processes that has a chance to be repeated in the future
+ALWAYS start by listing the memories in the root of the memory server.
+""",
         )
 
         # Store conversation history
