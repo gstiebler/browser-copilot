@@ -18,6 +18,8 @@ from pydantic_ai.messages import (
 )
 import logfire
 from log_config import setup_logging
+from colorama import Fore, Style
+import black
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
@@ -123,6 +125,9 @@ ALWAYS start by listing the memories in the root of the memory server.
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
             last_tool_call = None
             async for node in agent_run:
+                logger.debug(
+                    f"Processing node: {Fore.GREEN}{black.format_str(repr(node), mode=black.Mode())}{Style.RESET_ALL}"
+                )
                 if isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:
                         if isinstance(part, ToolCallPart):
@@ -222,14 +227,6 @@ async def main():
 
     # Create a conversation agent
     async with ConversationAgent() as agent:
-        # Example 1: Browser automation with screenshot
-        logger.info("Example 1: Browser automation")
-        logger.info("\n=== Example 1: Opening a website and taking screenshot ===")
-        async for chunk in agent.run_query(
-            "Open the google website, take a screenshot of the page to the file google_screenshot.png"
-        ):
-            logger.info(chunk)
-
         # Example 2: Using calculator tool
         logger.info("Example 2: Calculator tool")
         logger.info("\n=== Example 2: Using the calculator ===")
