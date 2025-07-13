@@ -5,7 +5,9 @@ from typing import List, AsyncGenerator, Union, Any
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai.providers.google_gla import GoogleGLAProvider
 from pydantic_ai.messages import (
     ModelMessage,
     ToolCallPart,
@@ -27,16 +29,30 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "")
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
 
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+
 # Set up logging
 logger = setup_logging(__name__)
 
 logfire.configure(token=LOGFIRE_TOKEN)
 logfire.instrument_pydantic_ai()
 
-logger.info(f"Using model: {OPENROUTER_MODEL}")
-print(f"Using model: {OPENROUTER_MODEL}")
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
+
+
+def get_model():
+    if OPENROUTER_MODEL != "":
+        print(f"Using openrouter model: {OPENROUTER_MODEL}")
+        return OpenAIModel(
+            OPENROUTER_MODEL,
+            provider=OpenRouterProvider(api_key=OPENROUTER_API_KEY),
+        )
+    else:
+        print(f"Using Gemini model: {GEMINI_MODEL}")
+        return GeminiModel(GEMINI_MODEL, provider=GoogleGLAProvider(api_key=GEMINI_API_KEY))
 
 
 class ConversationAgent:
@@ -72,10 +88,7 @@ class ConversationAgent:
         ]
 
         # Initialize the model
-        self.model = OpenAIModel(
-            OPENROUTER_MODEL,
-            provider=OpenRouterProvider(api_key=OPENROUTER_API_KEY),
-        )
+        self.model = get_model()
 
         # Initialize the agent with MCP server
         self.agent = Agent(
