@@ -28,8 +28,7 @@ logfire.instrument_pydantic_ai()
 
 print(f"Using model: {OPENROUTER_MODEL}")
 
-user_home = os.path.expanduser("~")
-TEMP_FOLDER = f"{user_home}/Documents/temp"
+TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
 
 
 class ConversationAgent:
