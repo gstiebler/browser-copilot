@@ -17,15 +17,20 @@ from pydantic_ai.messages import (
     ThinkingPart,
 )
 import logfire
+from log_config import setup_logging
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "")
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
 
+# Set up logging
+logger = setup_logging(__name__)
+
 logfire.configure(token=LOGFIRE_TOKEN)
 logfire.instrument_pydantic_ai()
 
+logger.info(f"Using model: {OPENROUTER_MODEL}")
 print(f"Using model: {OPENROUTER_MODEL}")
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
@@ -132,6 +137,7 @@ ALWAYS start by listing the memories in the root of the memory server.
                             == last_tool_call.tool_name
                             == "browser_take_screenshot"
                         ):
+                            logger.info(f"screenshot args: {last_tool_call.args}")
                             print(f"screenshot args: {last_tool_call.args}")
                             if isinstance(last_tool_call.args, str):
                                 parsed_args = json.loads(last_tool_call.args)
@@ -211,16 +217,45 @@ ALWAYS start by listing the memories in the root of the memory server.
 
 
 async def main():
+    """Simple usage example demonstrating the ConversationAgent."""
+    logger.info("Starting ConversationAgent example")
+
     # Create a conversation agent
     async with ConversationAgent() as agent:
-        # First query
-        print("Response 1:")
+        # Example 1: Browser automation with screenshot
+        logger.info("Example 1: Browser automation")
+        logger.info("\n=== Example 1: Opening a website and taking screenshot ===")
         async for chunk in agent.run_query(
-            "Open the google website, take a screenshot of the page to the file screenshot.png"
+            "Open the google website, take a screenshot of the page to the file google_screenshot.png"
         ):
-            print(chunk, end="", flush=True)
-            print()
-        print()
+            logger.info(chunk)
+
+        # Example 2: Using calculator tool
+        logger.info("Example 2: Calculator tool")
+        logger.info("\n=== Example 2: Using the calculator ===")
+        async for chunk in agent.run_query("Calculate 42 * 17 + 128"):
+            logger.info(chunk)
+
+        # Example 3: Memory storage
+        logger.info("Example 3: Memory storage")
+        logger.info("\n=== Example 3: Storing and retrieving memory ===")
+        async for chunk in agent.run_query(
+            "Store in memory that my favorite color is blue and my lucky number is 7"
+        ):
+            logger.info(chunk)
+
+        # Example 4: File operations
+        logger.info("Example 4: File operations")
+        logger.info("\n=== Example 4: Creating and reading a file ===")
+        async for chunk in agent.run_query(
+            "Create a file called test.txt with the content 'Hello from ConversationAgent!' and then read it back"
+        ):
+            logger.info(chunk)
+
+        # Show conversation history
+        logger.info("\n=== Conversation History ===")
+        logger.info("Printing conversation history")
+        logger.info(f"Total messages: {len(agent.get_messages())}")
 
 
 if __name__ == "__main__":
