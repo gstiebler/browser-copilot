@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 from typing import List, AsyncGenerator, Union, Any
-from pydantic_ai import Agent, CallToolsNode, ModelRequestNode
+from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -17,6 +17,7 @@ from pydantic_ai.messages import (
     ThinkingPart,
 )
 import logfire
+from pydantic_graph import End
 from log_config import setup_logging
 from colorama import Fore, Style
 import black
@@ -125,8 +126,15 @@ ALWAYS start by listing the memories in the root of the memory server.
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
             last_tool_call = None
             async for node in agent_run:
+                color_by_node: dict[type, str] = {
+                    CallToolsNode: Fore.GREEN,
+                    ModelRequestNode: Fore.BLUE,
+                    UserPromptNode: Fore.YELLOW,
+                    End: Fore.MAGENTA,
+                }
+                color = color_by_node.get(type(node), Fore.RED)
                 logger.debug(
-                    f"Processing node: {Fore.GREEN}{black.format_str(repr(node), mode=black.Mode())}{Style.RESET_ALL}"
+                    f"Processing node: {color}{black.format_str(repr(node), mode=black.Mode())}{Style.RESET_ALL}"
                 )
                 if isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:
