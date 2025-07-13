@@ -153,7 +153,6 @@ ALWAYS start by listing the memories in the root of the memory server.
                     for part in node.model_response.parts:
                         if isinstance(part, ToolCallPart):
                             last_tool_call = part
-                        yield {"type": "text", "text": self.get_part_text(part)}
                 elif isinstance(node, ModelRequestNode):
                     for part in node.request.parts:  # type: ignore[assignment]
                         if (
