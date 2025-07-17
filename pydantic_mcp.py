@@ -62,7 +62,16 @@ class ConversationAgent:
         """Initialize the agent with model and MCP server configuration."""
         mcp_servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
-            MCPServerStdio("npx", args=["@playwright/mcp@latest", "--output-dir", TEMP_FOLDER]),
+            MCPServerStdio(
+                "npx",
+                args=[
+                    "@playwright/mcp@latest",
+                    "--output-dir",
+                    TEMP_FOLDER,
+                    "--image-responses",
+                    "omit",
+                ],
+            ),
             MCPServerStdio(
                 "uvx",
                 args=[
@@ -247,32 +256,11 @@ async def main():
 
     # Create a conversation agent
     async with ConversationAgent() as agent:
-        # Example 2: Using calculator tool
-        logger.info("Example 2: Calculator tool")
-        logger.info("\n=== Example 2: Using the calculator ===")
-        async for chunk in agent.run_query("Calculate 42 * 17 + 128"):
+        # Example 2: Taking a screenshot
+        logger.info("Open the Canada Life website, and take a screenshot")
+        logger.info("\n=== Example 2: Taking a screenshot ===")
+        async for chunk in agent.run_query("Open the Canada Life website, and take a screenshot"):
             logger.info(chunk)
-
-        # Example 3: Memory storage
-        logger.info("Example 3: Memory storage")
-        logger.info("\n=== Example 3: Storing and retrieving memory ===")
-        async for chunk in agent.run_query(
-            "Store in memory that my favorite color is blue and my lucky number is 7"
-        ):
-            logger.info(chunk)
-
-        # Example 4: File operations
-        logger.info("Example 4: File operations")
-        logger.info("\n=== Example 4: Creating and reading a file ===")
-        async for chunk in agent.run_query(
-            "Create a file called test.txt with the content 'Hello from ConversationAgent!' and then read it back"
-        ):
-            logger.info(chunk)
-
-        # Show conversation history
-        logger.info("\n=== Conversation History ===")
-        logger.info("Printing conversation history")
-        logger.info(f"Total messages: {len(agent.get_messages())}")
 
 
 if __name__ == "__main__":
