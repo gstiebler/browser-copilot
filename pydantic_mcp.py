@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-from typing import List, AsyncGenerator, Any
+from typing import List, AsyncGenerator, Any, Optional
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
@@ -56,8 +56,9 @@ def get_model():
 class ConversationAgent:
     """A conversational agent that maintains message history across interactions."""
 
-    def __init__(self):
+    def __init__(self, node_processor=None):
         """Initialize the agent with model and MCP server configuration."""
+        self.node_processor = node_processor
         mcp_servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
             MCPServerStdio(
@@ -144,8 +145,9 @@ ALWAYS start by listing the memories in the root of the memory server.
         """
         # Run the query with existing message history
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
-            last_tool_call = None
+            nodes_so_far = []
             async for node in agent_run:
+                nodes_so_far.append(node)
                 color_by_node: dict[type, str] = {
                     CallToolsNode: Fore.GREEN,
                     ModelRequestNode: Fore.BLUE,
@@ -160,41 +162,59 @@ ALWAYS start by listing the memories in the root of the memory server.
                 #     yield {"type": "text", "node_type": "End", "text": node.data.output}
                 if isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:
-                        if isinstance(part, ToolCallPart):
-                            last_tool_call = part
-                        elif isinstance(part, TextPart):
+                        if isinstance(part, TextPart):
                             result = {
                                 "type": "text",
                                 "node_type": "CallToolsNode",
                                 "text": part.content,
                             }
                             yield result
-                elif isinstance(node, ModelRequestNode):
-                    for part in node.request.parts:  # type: ignore[assignment]
-                        if (
-                            isinstance(part, ToolReturnPart)
-                            and last_tool_call
-                            and part.tool_name
-                            == last_tool_call.tool_name
-                            == "browser_take_screenshot"
-                        ):
-                            logger.info(f"screenshot args: {last_tool_call.args}")
-                            print(f"screenshot args: {last_tool_call.args}")
-                            if isinstance(last_tool_call.args, str):
-                                parsed_args = json.loads(last_tool_call.args)
-                            elif isinstance(last_tool_call.args, dict):
-                                parsed_args = last_tool_call.args
-                            else:
-                                parsed_args = {}
-                            result = {
-                                "type": "image",
-                                "node_type": "ModelRequestNode",
-                                "filename": f"{TEMP_FOLDER}/{parsed_args.get('filename', 'screenshot.png')}",
-                            }
-                            yield result
+                nodes_processor_result = self.nodes_browser_screenshot_processor(nodes_so_far)
+                if nodes_processor_result:
+                    yield nodes_processor_result
 
             if agent_run.result is not None:
                 self.message_history = agent_run.result.all_messages()
+
+    def nodes_browser_screenshot_processor(self, nodes: List[Any]) -> Optional[dict]:
+        for i in range(1, len(nodes)):
+            previous_node = nodes[i - 1]
+            current_node = nodes[i]
+
+            if not isinstance(current_node, ModelRequestNode):
+                continue
+
+            previous_node_parts = (
+                previous_node.model_response.parts
+                if hasattr(previous_node, "model_response")
+                else []
+            )
+            previous_node_tool_call_part = next(
+                (part for part in previous_node_parts if isinstance(part, ToolCallPart)),
+                None,
+            )
+
+            for part in current_node.request.parts:  # type: ignore[assignment]
+                if (
+                    isinstance(part, ToolReturnPart)
+                    and previous_node_tool_call_part
+                    and part.tool_name
+                    == previous_node_tool_call_part.tool_name
+                    == "browser_take_screenshot"
+                ):
+                    if isinstance(previous_node_tool_call_part.args, str):
+                        parsed_args = json.loads(previous_node_tool_call_part.args)
+                    elif isinstance(previous_node_tool_call_part.args, dict):
+                        parsed_args = previous_node_tool_call_part.args
+                    else:
+                        parsed_args = {}
+                    return {
+                        "type": "image",
+                        "node_type": "ModelRequestNode",
+                        "filename": f"{TEMP_FOLDER}/{parsed_args.get('filename', 'screenshot.png')}",
+                    }
+
+        return None
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
@@ -232,6 +252,8 @@ async def main():
         logger.info("\n=== Example 2: Taking a screenshot ===")
         async for chunk in agent.run_query("Open the Canada Life website, and take a screenshot"):
             logger.info(chunk)
+
+        logger.info(black.format_str(repr(agent.get_messages()), mode=black.Mode()))
 
 
 if __name__ == "__main__":
