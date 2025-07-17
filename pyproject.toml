@@ -15,7 +15,7 @@ dependencies = [
     "logfire>=3.21.1",
     "mcp[cli]>=1.9.4",
     "nest-asyncio>=1.6.0",
-    "pydantic-ai>=0.3.2",
+    "pydantic-ai>=0.4.3",
     "python-telegram-bot>=22.1",
 ]
 
