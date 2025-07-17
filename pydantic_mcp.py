@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-from typing import List, AsyncGenerator, Union, Any
+from typing import List, AsyncGenerator, Any
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
@@ -15,8 +15,6 @@ from pydantic_ai.messages import (
     SystemPromptPart,
     TextPart,
     ToolReturnPart,
-    RetryPromptPart,
-    ThinkingPart,
 )
 import logfire
 from pydantic_graph import End
@@ -158,16 +156,17 @@ ALWAYS start by listing the memories in the root of the memory server.
                 logger.debug(
                     f"Processing node: {color}{black.format_str(repr(node), mode=black.Mode())}{Style.RESET_ALL}"
                 )
-                if isinstance(node, End):
-                    yield {"type": "text", "text": node.data.output}
-                elif isinstance(node, CallToolsNode):
+                # if isinstance(node, End):
+                #     yield {"type": "text", "node_type": "End", "text": node.data.output}
+                if isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:
                         if isinstance(part, ToolCallPart):
                             last_tool_call = part
                         elif isinstance(part, TextPart):
                             result = {
                                 "type": "text",
-                                "text": self.get_part_text(part),
+                                "node_type": "CallToolsNode",
+                                "text": part.content,
                             }
                             yield result
                 elif isinstance(node, ModelRequestNode):
@@ -189,6 +188,7 @@ ALWAYS start by listing the memories in the root of the memory server.
                                 parsed_args = {}
                             result = {
                                 "type": "image",
+                                "node_type": "ModelRequestNode",
                                 "filename": f"{TEMP_FOLDER}/{parsed_args.get('filename', 'screenshot.png')}",
                             }
                             yield result
@@ -219,43 +219,6 @@ ALWAYS start by listing the memories in the root of the memory server.
             print(f"Text part: {part.content}")
         elif isinstance(part, ToolReturnPart):
             print(f"Tool return: {part.content}")
-
-    def get_part_text(
-        self,
-        part: Union[
-            ToolCallPart,
-            UserPromptPart,
-            SystemPromptPart,
-            TextPart,
-            ToolReturnPart,
-            RetryPromptPart,
-            ThinkingPart,
-        ],
-    ) -> str:
-        if isinstance(part, ToolCallPart):
-            return f"Tool call: {part.tool_name}\nTool call args: {part.args}"
-        elif isinstance(part, UserPromptPart):
-            content = part.content
-            if isinstance(content, str):
-                return content
-            else:
-                return str(content)
-        elif isinstance(part, SystemPromptPart):
-            return part.content
-        elif isinstance(part, TextPart):
-            return part.content
-        elif isinstance(part, ToolReturnPart):
-            return part.content
-        elif isinstance(part, RetryPromptPart):
-            content = part.content  # type: ignore[assignment]
-            if isinstance(content, str):
-                return content
-            else:
-                return str(content)
-        elif isinstance(part, ThinkingPart):
-            return part.content
-        else:
-            return ""
 
 
 async def main():
