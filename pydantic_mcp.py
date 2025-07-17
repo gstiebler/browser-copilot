@@ -174,7 +174,43 @@ ALWAYS start by listing the memories in the root of the memory server.
                     yield nodes_processor_result
 
             if agent_run.result is not None:
-                self.message_history = agent_run.result.all_messages()
+                self.message_history = self.memory_summarizer(agent_run.result.all_messages())
+
+    def memory_summarizer(self, nodes: List[ModelMessage]) -> List[ModelMessage]:
+        """
+        Summarize the memory nodes and return a list of ModelMessage objects.
+
+        Args:
+            nodes: List of ModelMessage objects to summarize
+        Returns:
+            List of summarized ModelMessage objects
+        """
+        # count the number of ToolResult parts in the nodes
+        tool_result_count = sum(
+            sum(1 for part in node.parts if isinstance(part, ToolReturnPart)) for node in nodes
+        )
+        # if theres more than 1 ToolResult part, leave only the last one, replacing the others with a TextPart
+        if tool_result_count > 1:
+            removed_tool_return_count = 0
+            for node in nodes:
+                if isinstance(node, ModelRequestNode):
+                    processed_parts: list = []
+                    for part in node.request.parts:
+                        if isinstance(part, ToolReturnPart):
+                            removed_tool_return_count += 1
+                            if removed_tool_return_count == tool_result_count:
+                                processed_parts.append(part)
+                            else:
+                                processed_parts.append(
+                                    TextPart(content="Tool return removed for memory reasons")
+                                )
+                        else:
+                            processed_parts.append(part)
+                    node.request.parts = processed_parts
+
+            return nodes
+
+        return nodes
 
     def nodes_browser_screenshot_processor(self, nodes: List[Any]) -> Optional[dict]:
         for i in range(1, len(nodes)):
