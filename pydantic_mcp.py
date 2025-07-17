@@ -158,7 +158,9 @@ ALWAYS start by listing the memories in the root of the memory server.
                 logger.debug(
                     f"Processing node: {color}{black.format_str(repr(node), mode=black.Mode())}{Style.RESET_ALL}"
                 )
-                if isinstance(node, CallToolsNode):
+                if isinstance(node, End):
+                    yield {"type": "text", "text": node.data.output}
+                elif isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:
                         if isinstance(part, ToolCallPart):
                             last_tool_call = part
