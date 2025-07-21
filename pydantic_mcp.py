@@ -1,8 +1,7 @@
 import asyncio
-import json
 import os
-from typing import List, AsyncGenerator, Any, Optional
-from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
+from typing import List, AsyncGenerator, Any
+from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models.gemini import GeminiModel
@@ -21,6 +20,7 @@ from pydantic_graph import End
 from log_config import setup_logging
 from colorama import Fore, Style
 import black
+from browser_agent import BrowserAgent
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
@@ -62,16 +62,6 @@ class ConversationAgent:
         mcp_servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
             MCPServerStdio(
-                "npx",
-                args=[
-                    "@playwright/mcp@latest",
-                    "--output-dir",
-                    TEMP_FOLDER,
-                    "--image-responses",
-                    "omit",
-                ],
-            ),
-            MCPServerStdio(
                 "uvx",
                 args=[
                     "--from",
@@ -102,18 +92,24 @@ class ConversationAgent:
         self.agent = Agent(
             self.model,
             mcp_servers=mcp_servers,
-            system_prompt="""You are a helpful agent that interacts with the browser in behalf of the user.
-You can open websites, take screenshots, and perform other tasks using the browser.
-You can also use tools like a calculator, PDF reader, and memory server to assist the user.
-You will receive user queries and respond with the appropriate actions or information.
-You will use the tools provided by the MCP servers to perform tasks.
+            system_prompt="""You are a helpful AI assistant that can help users with various tasks.
+You have access to:
+- A calculator for mathematical operations
+- A PDF reader for processing PDF documents
+- A memory server for storing and retrieving information
+- A filesystem server for managing files in the temp folder
+- A browser interaction tool for web-related tasks
+
+When users ask you to interact with websites, take screenshots, or perform browser automation tasks,
+use the browser_interact tool to delegate these tasks to the browser agent.
+
 After each iteration, reflect if there's something useful that you should store in the memory server.
 Examples of useful information to store include:
 - Important URLs or web pages
-- Interactions with Playwright or other browser actions
 - User preferences
-- User informations that can be useful in future interactions
-- Processes that has a chance to be repeated in the future
+- User information that can be useful in future interactions
+- Processes that have a chance to be repeated in the future
+
 ALWAYS start by listing the memories in the root of the memory server.
 """,
         )
@@ -122,14 +118,50 @@ ALWAYS start by listing the memories in the root of the memory server.
         self.message_history: List[ModelMessage] = []
         self.mcp_context = None
 
+        # Initialize browser agent
+        self.browser_agent = None
+
+        # Create browser interaction tool
+        @self.agent.tool
+        async def browser_interact(ctx: RunContext[None], task: str) -> str:
+            """Interact with web browsers to perform tasks like navigation, screenshots, and automation.
+
+            Args:
+                task: Description of the browser task to perform
+
+            Returns:
+                Result of the browser interaction
+            """
+            if not self.browser_agent:
+                return "Browser agent not initialized. Please try again."
+
+            results = []
+            async for chunk in self.browser_agent.execute_browser_task(task, usage=ctx.usage):
+                if chunk["type"] == "text":
+                    results.append(chunk["text"])
+                elif chunk["type"] == "image":
+                    # Store the image path for the main agent to process
+                    self._pending_screenshot = chunk["filename"]
+                    results.append(f"Screenshot saved to: {chunk['filename']}")
+
+            return "\n".join(results) if results else "Browser task completed."
+
     async def __aenter__(self) -> "ConversationAgent":
         """Enter async context manager for MCP servers."""
         self.mcp_context = self.agent.run_mcp_servers()
         await self.mcp_context.__aenter__()
+
+        # Initialize browser agent
+        self.browser_agent = BrowserAgent(self.model)
+        await self.browser_agent.__aenter__()
+
+        self._pending_screenshot = None
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit async context manager for MCP servers."""
+        if self.browser_agent:
+            await self.browser_agent.__aexit__(exc_type, exc_val, exc_tb)
         if self.mcp_context:
             await self.mcp_context.__aexit__(exc_type, exc_val, exc_tb)
 
@@ -169,9 +201,14 @@ ALWAYS start by listing the memories in the root of the memory server.
                                 "text": part.content,
                             }
                             yield result
-                nodes_processor_result = self.nodes_browser_screenshot_processor(nodes_so_far)
-                if nodes_processor_result:
-                    yield nodes_processor_result
+                # Check if we have a pending screenshot from browser agent
+                if self._pending_screenshot:
+                    yield {
+                        "type": "image",
+                        "node_type": "BrowserScreenshot",
+                        "filename": self._pending_screenshot,
+                    }
+                    self._pending_screenshot = None
 
             if agent_run.result is not None:
                 self.message_history = self.memory_summarizer(agent_run.result.all_messages())
@@ -211,46 +248,6 @@ ALWAYS start by listing the memories in the root of the memory server.
             return nodes
 
         return nodes
-
-    def nodes_browser_screenshot_processor(self, nodes: List[Any]) -> Optional[dict]:
-        for i in range(1, len(nodes)):
-            previous_node = nodes[i - 1]
-            current_node = nodes[i]
-
-            if not isinstance(current_node, ModelRequestNode):
-                continue
-
-            previous_node_parts = (
-                previous_node.model_response.parts
-                if hasattr(previous_node, "model_response")
-                else []
-            )
-            previous_node_tool_call_part = next(
-                (part for part in previous_node_parts if isinstance(part, ToolCallPart)),
-                None,
-            )
-
-            for part in current_node.request.parts:  # type: ignore[assignment]
-                if (
-                    isinstance(part, ToolReturnPart)
-                    and previous_node_tool_call_part
-                    and part.tool_name
-                    == previous_node_tool_call_part.tool_name
-                    == "browser_take_screenshot"
-                ):
-                    if isinstance(previous_node_tool_call_part.args, str):
-                        parsed_args = json.loads(previous_node_tool_call_part.args)
-                    elif isinstance(previous_node_tool_call_part.args, dict):
-                        parsed_args = previous_node_tool_call_part.args
-                    else:
-                        parsed_args = {}
-                    return {
-                        "type": "image",
-                        "node_type": "ModelRequestNode",
-                        "filename": f"{TEMP_FOLDER}/{parsed_args.get('filename', 'screenshot.png')}",
-                    }
-
-        return None
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
