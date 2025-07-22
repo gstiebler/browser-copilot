@@ -125,6 +125,13 @@ ALWAYS start by listing the memories in the root of the memory server.
         @self.agent.tool
         async def browser_interact(ctx: RunContext[None], task: str) -> str:
             """Interact with web browsers to perform tasks like navigation, screenshots, and automation.
+            It can:
+            - Navigate to websites
+            - Take screenshots
+            - Click on elements
+            - Fill forms
+            - Extract information from web pages
+            - Perform various browser automation tasks
 
             Args:
                 task: Description of the browser task to perform
