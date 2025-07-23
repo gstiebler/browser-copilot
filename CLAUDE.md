@@ -9,17 +9,27 @@ Browser Copilot is a Telegram bot that uses AI agents to interact with web brows
 ## Development Commands
 
 ```bash
-# Install dependencies
+# Install dependencies using uv
 uv sync
 
-# Run the Telegram bot
-python telegram_bot.py
+# Run the Telegram bot (main entry point)
+uv run python telegram_bot.py
 
-# Run the main test script
-python main.py
+# Test the browser agent standalone
+uv run python browser_agent.py
 
 # Test the pydantic MCP agent
-python pydantic_mcp.py
+uv run python pydantic_mcp.py
+
+# Run linting
+uv run ruff check .
+uv run ruff format .
+
+# Run type checking
+uv run mypy .
+
+# Run tests
+uv run pytest
 ```
 
 ## Architecture
@@ -27,34 +37,63 @@ python pydantic_mcp.py
 ### Core Components
 
 1. **telegram_bot.py**: Main Telegram bot interface
-   - Handles user messages and commands
+   - Entry point for the application
+   - Handles user messages, commands (/start, /help, /echo)
+   - PDF document handling with automatic download
    - Integrates with ConversationAgent for AI-powered responses
-   - Manages lifecycle of MCP servers
-`
+   - Manages MCP server lifecycle (startup/shutdown)
+   - Uses MarkdownV2 parsing for message formatting
+
 2. **pydantic_mcp.py**: AI Agent implementation
    - ConversationAgent class manages conversation history
-   - Integrates multiple MCP servers (calculator, browser automation, PDF, memory, filesystem)
-   - Uses OpenRouter API for language model access
+   - Integrates multiple MCP servers (calculator, browser, PDF, memory, filesystem)
+   - Supports both OpenRouter (via OPENROUTER_API_KEY) and Google Gemini models
    - Handles screenshot capture and image responses
+   - Implements browser_interact tool for web automation tasks
+
+3. **browser_agent.py**: Specialized browser automation agent
+   - BrowserAgent class specifically for Playwright MCP server
+   - Handles browser navigation, screenshots, form filling, and web scraping
+   - Processes screenshot nodes and returns image paths
+   - Works in conjunction with ConversationAgent for browser tasks
 
 ### MCP Server Integration
 
 The system uses multiple MCP servers:
-- **Calculator**: Basic mathematical operations
-- **Playwright Browser**: Web browser automation and screenshots
-- **PDF Server**: PDF processing capabilities
-- **Memory Server**: Persistent memory storage
-- **Filesystem Server**: File system operations in temp folder
+- **Calculator** (`mcp-server-calculator`): Mathematical operations
+- **Playwright Browser** (`@playwright/mcp@latest`): Web automation and screenshots
+- **PDF Server** (`pdf-mcp-server`): PDF document processing
+- **Memory Server** (`h-memory-mcp-server`): Persistent memory storage with reflection
+- **Filesystem Server** (`@modelcontextprotocol/server-filesystem`): File operations in temp folder
 
 ### Environment Configuration
 
 Required environment variables (.env):
 - `TELEGRAM_TOKEN`: Telegram bot authentication token
-- `OPENROUTER_API_KEY`: API key for OpenRouter
+- `OPENROUTER_API_KEY`: API key for OpenRouter (optional)
 - `OPENROUTER_MODEL`: Model name to use (e.g., "openai/gpt-4")
-- `LOGFIRE_TOKEN`: Token for Logfire monitoring
+- `GEMINI_API_KEY`: Google Gemini API key (used if OpenRouter not configured)
+- `GEMINI_MODEL`: Gemini model name (default: "gemini-2.5-flash")
+- `LOGFIRE_TOKEN`: Token for Logfire monitoring and instrumentation
+- `TEMPDIR`: Temporary directory path (default: "/tmp")
+- `FILE_LOG_LEVEL`: File logging level (default: "DEBUG")
+- `CONSOLE_LOG_LEVEL`: Console logging level (default: "INFO")
 
-### Key Directories
+### Key Features
 
-- Temp folder: `~/Documents/temp/` - Used for screenshots and temporary files
-- Memory storage: `~/Documents/datas/ai_memory.json` - Persistent AI memory
+- **Multi-Agent Architecture**: Separate agents for general tasks and browser-specific operations
+- **Conversation Memory**: Maintains context across interactions using message history
+- **Browser Automation**: Full web browser control through natural language
+- **PDF Processing**: Automatic handling of PDF documents sent via Telegram
+- **Persistent Memory**: AI can store and retrieve information across sessions
+- **Streaming Responses**: Yields intermediate results for real-time feedback
+- **Comprehensive Logging**: Colored console output and file logging with Logfire integration
+
+### Message Flow
+
+1. User sends message/document to Telegram bot
+2. TelegramBot receives and forwards to ConversationAgent
+3. ConversationAgent processes with appropriate MCP servers
+4. For browser tasks, delegates to BrowserAgent via browser_interact tool
+5. Results (text/images) are streamed back to user
+6. Conversation history is maintained for context
