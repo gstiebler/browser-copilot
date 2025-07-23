@@ -79,6 +79,7 @@ always specify a meaningful filename that describes what's being captured.
         Args:
             task: The browser task to execute
             usage: Usage tracking from parent agent
+            message_history: Previous message history to include
 
         Yields:
             Dictionaries containing response chunks and screenshot info
