@@ -25,7 +25,7 @@ class BrowserAgent:
         """Initialize the browser agent with Playwright MCP server configuration."""
         self.model = model
 
-        # Initialize only the Playwright MCP server
+        # Initialize the Playwright and Memory MCP servers
         mcp_servers = [
             MCPServerStdio(
                 "npx",
@@ -35,6 +35,16 @@ class BrowserAgent:
                     TEMP_FOLDER,
                     "--image-responses",
                     "omit",
+                ],
+            ),
+            MCPServerStdio(
+                "uvx",
+                args=[
+                    "--from",
+                    "git+https://github.com/gstiebler/h-memory-mcp-server.git",
+                    "h-memory-mcp-server",
+                    "--memory-file",
+                    "memory.json",
                 ],
             ),
         ]
@@ -51,9 +61,12 @@ You can:
 - Fill forms
 - Extract information from web pages
 - Perform various browser automation tasks
+- Store and retrieve persistent information using memory tools
 
-You have access to Playwright browser automation tools. When taking screenshots, 
-always specify a meaningful filename that describes what's being captured.
+You have access to Playwright browser automation tools and memory storage. 
+When taking screenshots, always specify a meaningful filename that describes what's being captured.
+You can use memory tools to save important information from browsing sessions for future reference.
+Add any learnings you had while interacting with Playwright to the memory server.
 """,
         )
 

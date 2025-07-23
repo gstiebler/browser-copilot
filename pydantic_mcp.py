@@ -145,9 +145,6 @@ ALWAYS start by listing the memories in the root of the memory server.
                 elif chunk["type"] == "image":
                     # Store the image path for the main agent to process
                     self._pending_screenshot = chunk["filename"]
-                elif chunk["type"] == "memory_update":
-                    # Update the message history with the summarized messages
-                    self.message_history = chunk["messages"]
                     results.append(f"Screenshot saved to: {chunk['filename']}")
 
             return "\n".join(results) if results else "Browser task completed."
@@ -217,9 +214,8 @@ ALWAYS start by listing the memories in the root of the memory server.
                     self._pending_screenshot = None
 
             if agent_run.result is not None:
-                # Memory summarization is now handled by browser agent when used
-                if not self.browser_agent:
-                    self.message_history = agent_run.result.all_messages()
+                # Store conversation history
+                self.message_history = agent_run.result.all_messages()
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
