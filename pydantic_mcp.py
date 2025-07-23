@@ -9,9 +9,6 @@ from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
 from pydantic_ai.messages import (
     ModelMessage,
-    ToolCallPart,
-    UserPromptPart,
-    SystemPromptPart,
     TextPart,
     ToolReturnPart,
 )
@@ -259,26 +256,6 @@ ALWAYS start by listing the memories in the root of the memory server.
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
         return self.message_history.copy()
-
-    def print_messages(self):
-        """Print the messages in the conversation history."""
-        messages = self.get_messages()
-        for message in messages:
-            for part in message.parts:
-                self.print_part(part)
-
-    def print_part(self, part: Any) -> None:
-        if isinstance(part, ToolCallPart):
-            print(f"Tool call: {part.tool_name}")
-            print(f"Tool call args: {part.args}")
-        elif isinstance(part, UserPromptPart):
-            print(f"User prompt: {part.content}")
-        elif isinstance(part, SystemPromptPart):
-            print(f"System prompt: {part.content}")
-        elif isinstance(part, TextPart):
-            print(f"Text part: {part.content}")
-        elif isinstance(part, ToolReturnPart):
-            print(f"Tool return: {part.content}")
 
 
 async def main():
