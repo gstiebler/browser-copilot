@@ -252,10 +252,6 @@ etc."""
                 elements_text = full_text[elements_start:].strip()
 
                 # Split by lines and filter element entries
-                for line in elements_text.split("\n"):
-                    line = line.strip()
-                    if line and line.startswith("-"):
-                        if isinstance(result["interactable_elements"], list):
-                            result["interactable_elements"].append(line)
+                result["interactable_elements"] = elements_text.split("\n")
 
         return result
