@@ -19,6 +19,9 @@ dependencies = [
     "python-telegram-bot>=22.1",
 ]
 
+[project.scripts]
+telegram = "src.telegram_bot:main"
+
 [dependency-groups]
 dev = [
     "mypy>=1.16.1",
