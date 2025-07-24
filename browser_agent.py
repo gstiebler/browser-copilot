@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List, Any, Optional, AsyncGenerator
+from typing import List, Any, Optional, AsyncGenerator, Dict
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
@@ -176,3 +176,86 @@ Add any learnings you had while interacting with Playwright to the memory server
                     }
 
         return None
+
+    async def capture_page_snapshot(self, usage: Any = None) -> Dict[str, Any]:
+        """
+        Capture a snapshot of the current web page and analyze it to extract interactable elements.
+
+        Returns:
+            Dictionary containing:
+            - page_summary: Brief description of the page
+            - interactable_elements: List of all clickable/fillable elements with their details
+            - screenshot_path: Path to the screenshot if taken
+        """
+        snapshot_prompt = """Please:
+1. Take a screenshot of the current page
+2. Use browser_snapshot to get the accessibility tree
+3. Analyze the snapshot and provide:
+   - A brief summary of what the page contains
+   - A comprehensive list of ALL interactable elements (buttons, links, inputs, dropdowns, etc.)
+   
+For each interactable element, include:
+- Element type (button, link, input, select, etc.)
+- Text/label of the element
+- Element reference ID (for interaction)
+- Any additional relevant attributes (placeholder text, current value, etc.)
+
+Format the response as:
+SUMMARY: [brief page description]
+
+INTERACTABLE ELEMENTS:
+- [element details]
+- [element details]
+etc."""
+
+        result: Dict[str, Any] = {
+            "page_summary": "",
+            "interactable_elements": [],
+            "screenshot_path": None,
+        }
+
+        async with self.agent.iter(snapshot_prompt, usage=usage) as agent_run:
+            full_response = []
+            nodes_collected = []
+
+            async for node in agent_run:
+                nodes_collected.append(node)
+
+                # Collect text responses
+                if isinstance(node, CallToolsNode):
+                    for part in node.model_response.parts:
+                        if isinstance(part, TextPart):
+                            full_response.append(part.content)
+
+                # Check for screenshot
+                screenshot_info = self._process_screenshot_nodes(nodes_collected)
+                if screenshot_info:
+                    result["screenshot_path"] = screenshot_info["filename"]
+
+            # Process the response to extract summary and elements
+            full_text = "\n".join(full_response)
+
+            # Extract summary
+            if "SUMMARY:" in full_text:
+                summary_start = full_text.find("SUMMARY:") + len("SUMMARY:")
+                summary_end = full_text.find("\n", summary_start)
+                if summary_end == -1:
+                    summary_end = full_text.find("INTERACTABLE", summary_start)
+                if summary_end != -1:
+                    result["page_summary"] = full_text[summary_start:summary_end].strip()
+
+            # Extract interactable elements
+            if "INTERACTABLE ELEMENTS:" in full_text:
+                elements_start = full_text.find("INTERACTABLE ELEMENTS:") + len(
+                    "INTERACTABLE ELEMENTS:"
+                )
+                elements_text = full_text[elements_start:].strip()
+
+                # Split by lines and filter element entries
+                for line in elements_text.split("\n"):
+                    line = line.strip()
+                    if line and line.startswith("-"):
+                        if isinstance(result["interactable_elements"], list):
+                            result["interactable_elements"].append(line)
+
+        return result

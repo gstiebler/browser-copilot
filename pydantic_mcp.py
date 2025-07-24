@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import List, AsyncGenerator, Any
+from typing import List, AsyncGenerator, Any, Optional
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel
@@ -37,7 +37,7 @@ logfire.instrument_pydantic_ai()
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
 
 
-def get_model():
+def get_model() -> Any:
     if OPENROUTER_MODEL != "":
         print(f"Using openrouter model: {OPENROUTER_MODEL}")
         return OpenAIModel(
@@ -52,7 +52,7 @@ def get_model():
 class ConversationAgent:
     """A conversational agent that maintains message history across interactions."""
 
-    def __init__(self, node_processor=None):
+    def __init__(self, node_processor: Any = None) -> None:
         """Initialize the agent with model and MCP server configuration."""
         self.node_processor = node_processor
         mcp_servers = [
@@ -99,6 +99,10 @@ You have access to:
 When users ask you to interact with websites, take screenshots, or perform browser automation tasks,
 use the browser_interact tool to delegate these tasks to the browser agent.
 
+You can also use the capture_webpage_snapshot tool to get a comprehensive view of the current webpage,
+including a summary and list of all interactable elements, which is useful for understanding what
+actions are possible on the page.
+
 After each iteration, reflect if there's something useful that you should store in the memory server.
 Examples of useful information to store include:
 - Important URLs or web pages
@@ -112,10 +116,11 @@ ALWAYS start by listing the memories in the root of the memory server.
 
         # Store conversation history
         self.message_history: List[ModelMessage] = []
-        self.mcp_context = None
+        self.mcp_context: Optional[Any] = None
 
         # Initialize browser agent
-        self.browser_agent = None
+        self.browser_agent: Optional[BrowserAgent] = None
+        self._pending_screenshot: Optional[str] = None
 
         # Create browser interaction tool
         @self.agent.tool
@@ -148,6 +153,48 @@ ALWAYS start by listing the memories in the root of the memory server.
                     results.append(f"Screenshot saved to: {chunk['filename']}")
 
             return "\n".join(results) if results else "Browser task completed."
+
+        # Create page snapshot tool
+        @self.agent.tool
+        async def capture_webpage_snapshot(ctx: RunContext[None]) -> str:
+            """Capture a comprehensive snapshot of the current web page including:
+            - A screenshot of the current page
+            - A summary of the page content
+            - A complete list of all interactable UI elements
+
+            This tool analyzes the page and returns a structured list of all elements
+            you can interact with (buttons, links, inputs, etc.) along with their
+            reference IDs for use in subsequent interactions.
+
+            Returns:
+                A formatted summary and list of interactable elements
+            """
+            if not self.browser_agent:
+                return "Browser agent not initialized. Please navigate to a webpage first."
+
+            snapshot = await self.browser_agent.capture_page_snapshot(usage=ctx.usage)
+
+            if snapshot.get("screenshot_path"):
+                # Store screenshot path for the main agent to process
+                self._pending_screenshot = snapshot["screenshot_path"]
+
+            # Format the response
+            response_parts = []
+
+            if snapshot.get("page_summary"):
+                response_parts.append(f"**Page Summary:** {snapshot['page_summary']}")
+
+            if snapshot.get("interactable_elements"):
+                response_parts.append("\n**Interactable Elements:**")
+                for element in snapshot["interactable_elements"]:
+                    response_parts.append(element)
+            else:
+                response_parts.append("\nNo interactable elements found on the page.")
+
+            if snapshot.get("screenshot_path"):
+                response_parts.append(f"\n**Screenshot saved to:** {snapshot['screenshot_path']}")
+
+            return "\n".join(response_parts)
 
     async def __aenter__(self) -> "ConversationAgent":
         """Enter async context manager for MCP servers."""

@@ -138,7 +138,13 @@ class TelegramBot:
                     escaped_text = escape_markdown_v2(chunk["text"])
                     await update.message.reply_text(escaped_text, parse_mode="MarkdownV2")
                 elif chunk["type"] == "image":
-                    await update.message.reply_photo(photo=chunk["filename"])
+                    if os.path.exists(chunk["filename"]):
+                        await update.message.reply_photo(photo=chunk["filename"])
+                    else:
+                        self.logger.warning(f"Image file not found: {chunk['filename']}")
+                        await update.message.reply_text(
+                            f"⚠️ Image was generated but file not found: {chunk['filename']}"
+                        )
 
     async def pdf_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle PDF documents sent by users."""
@@ -171,7 +177,13 @@ class TelegramBot:
                         escaped_text = escape_markdown_v2(chunk["text"])
                         await update.message.reply_text(escaped_text, parse_mode="MarkdownV2")
                     elif chunk["type"] == "image":
-                        await update.message.reply_photo(photo=chunk["filename"])
+                        if os.path.exists(chunk["filename"]):
+                            await update.message.reply_photo(photo=chunk["filename"])
+                        else:
+                            self.logger.warning(f"Image file not found: {chunk['filename']}")
+                            await update.message.reply_text(
+                                f"⚠️ Image was generated but file not found: {chunk['filename']}"
+                            )
 
             except Exception as e:
                 self.logger.error(f"Error handling PDF: {e}")
