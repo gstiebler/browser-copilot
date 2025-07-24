@@ -13,13 +13,13 @@ Browser Copilot is a Telegram bot that uses AI agents to interact with web brows
 uv sync
 
 # Run the Telegram bot (main entry point)
-uv run python telegram_bot.py
+uv run python src/telegram_bot.py
 
 # Test the browser agent standalone
-uv run python browser_agent.py
+uv run python src/browser_agent.py
 
 # Test the pydantic MCP agent
-uv run python pydantic_mcp.py
+uv run python src/pydantic_mcp.py
 
 # Run linting
 uv run ruff check .
@@ -36,7 +36,7 @@ uv run pytest
 
 ### Core Components
 
-1. **telegram_bot.py**: Main Telegram bot interface
+1. **src/telegram_bot.py**: Main Telegram bot interface
    - Entry point for the application
    - Handles user messages, commands (/start, /help, /echo)
    - PDF document handling with automatic download
@@ -44,14 +44,14 @@ uv run pytest
    - Manages MCP server lifecycle (startup/shutdown)
    - Uses MarkdownV2 parsing for message formatting
 
-2. **pydantic_mcp.py**: AI Agent implementation
+2. **src/pydantic_mcp.py**: AI Agent implementation
    - ConversationAgent class manages conversation history
    - Integrates multiple MCP servers (calculator, browser, PDF, memory, filesystem)
    - Supports both OpenRouter (via OPENROUTER_API_KEY) and Google Gemini models
    - Handles screenshot capture and image responses
    - Implements browser_interact tool for web automation tasks
 
-3. **browser_agent.py**: Specialized browser automation agent
+3. **src/browser_agent.py**: Specialized browser automation agent
    - BrowserAgent class specifically for Playwright MCP server
    - Handles browser navigation, screenshots, form filling, and web scraping
    - Processes screenshot nodes and returns image paths
