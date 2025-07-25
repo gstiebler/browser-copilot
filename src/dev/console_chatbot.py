@@ -1,0 +1,152 @@
+import asyncio
+import os
+from typing import List, AsyncGenerator, Optional, Any
+from pydantic_ai import Agent
+from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.messages import ModelMessage
+from colorama import init, Fore, Style
+from ..model_config import get_model
+from ..log_config import setup_logging
+
+# Initialize colorama for colored output
+init(autoreset=True)
+
+# Set up logging
+logger = setup_logging(__name__)
+
+TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
+MAIN_MODEL_NAME = os.getenv("MAIN_MODEL", "")
+
+system_prompt = """
+You are a browser automation assistant that helps a developer interact with web browsers,
+and troubleshoot issues with Playwright MCP server.
+Always execute one command at a time and wait for the user feedback before proceeding withe the next command.
+"""
+
+
+class ConsoleAgent:
+    """A simple console-based agent with Playwright MCP server."""
+
+    def __init__(self) -> None:
+        """Initialize the agent with Playwright MCP server configuration."""
+        # Configure Playwright MCP server
+        mcp_servers = [
+            MCPServerStdio(
+                "npx",
+                args=[
+                    "@playwright/mcp@latest",
+                    "--output-dir",
+                    TEMP_FOLDER,
+                    "--image-responses",
+                    "omit",
+                ],
+            )
+        ]
+
+        # Initialize the model
+        self.model = get_model(MAIN_MODEL_NAME)
+
+        # Initialize the agent
+        self.agent = Agent(
+            self.model,
+            mcp_servers=mcp_servers,
+            system_prompt=system_prompt,
+            name="ConsoleAgent",
+        )
+        # Store conversation history
+        self.message_history: List[ModelMessage] = []
+        self.mcp_context: Optional[Any] = None
+
+    async def __aenter__(self) -> "ConsoleAgent":
+        """Enter async context manager for MCP servers."""
+        self.mcp_context = self.agent.run_mcp_servers()
+        if self.mcp_context:
+            await self.mcp_context.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Exit async context manager for MCP servers."""
+        if self.mcp_context:
+            await self.mcp_context.__aexit__(exc_type, exc_val, exc_tb)
+
+    def clear_history(self) -> None:
+        """Clear the conversation history."""
+        self.message_history = []
+        print(f"{Fore.YELLOW}Conversation history cleared.{Style.RESET_ALL}")
+
+    async def run_query(self, query: str) -> AsyncGenerator[str, None]:
+        """
+        Run a query and yield streaming responses.
+
+        Args:
+            query: The user's query
+
+        Yields:
+            Response text chunks
+        """
+        try:
+            async with self.agent.iter(query, message_history=self.message_history) as agent_run:
+                async for node in agent_run:
+                    # Extract text from the node if available
+                    if hasattr(node, "model_response") and hasattr(node.model_response, "parts"):
+                        for part in node.model_response.parts:
+                            if hasattr(part, "content") and isinstance(part.content, str):
+                                yield part.content
+
+                # Update conversation history
+                if agent_run.result is not None:
+                    self.message_history = agent_run.result.all_messages()
+
+        except Exception as e:
+            logger.error(f"Error running query: {e}")
+            yield f"Error: {str(e)}"
+
+
+async def main():
+    """Main console interaction loop."""
+    print(f"{Fore.CYAN}Browser Automation Console Chat{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'=' * 40}{Style.RESET_ALL}")
+    print(f"Type {Fore.GREEN}/exit{Style.RESET_ALL} to quit")
+    print(f"Type {Fore.GREEN}/clear{Style.RESET_ALL} to clear conversation history")
+    print()
+
+    async with ConsoleAgent() as agent:
+        while True:
+            try:
+                # Get user input
+                user_input = input(f"{Fore.BLUE}> {Style.RESET_ALL}")
+
+                # Handle commands
+                if user_input.lower() in ["/exit", "/quit"]:
+                    print(f"{Fore.YELLOW}Goodbye!{Style.RESET_ALL}")
+                    break
+                elif user_input.lower() == "/clear":
+                    agent.clear_history()
+                    continue
+                elif not user_input.strip():
+                    continue
+
+                # Process the query
+                print(f"{Fore.GREEN}Assistant:{Style.RESET_ALL} ", end="", flush=True)
+
+                response_parts = []
+                async for chunk in agent.run_query(user_input):
+                    print(chunk, end="", flush=True)
+                    response_parts.append(chunk)
+
+                print()  # New line after response
+                print()  # Extra line for spacing
+
+            except KeyboardInterrupt:
+                print(f"\n{Fore.YELLOW}Interrupted. Type /exit to quit.{Style.RESET_ALL}")
+                continue
+            except Exception as e:
+                logger.error(f"Error in main loop: {e}")
+                print(f"{Fore.RED}Error: {str(e)}{Style.RESET_ALL}")
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print(f"\n{Fore.YELLOW}Goodbye!{Style.RESET_ALL}")
