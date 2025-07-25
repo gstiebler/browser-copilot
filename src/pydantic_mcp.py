@@ -33,6 +33,31 @@ TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
 MAIN_MODEL_NAME = os.getenv("MAIN_MODEL", "")
 BROWSER_MODEL_NAME = os.getenv("BROWSER_MODEL", "")
 
+system_prompt = """You are a helpful AI assistant that can help users with various tasks.
+You have access to:
+- A calculator for mathematical operations
+- A PDF reader for processing PDF documents
+- A memory server for storing and retrieving information
+- A filesystem server for managing files in the temp folder
+- A browser interaction tool for web-related tasks
+
+When users ask you to interact with websites, take screenshots, or perform browser automation tasks,
+use the browser_interact tool to delegate these tasks to the browser agent.
+
+You can also use the capture_webpage_snapshot tool to get a comprehensive view of the current webpage,
+including a summary and list of all interactable elements, which is useful for understanding what
+actions are possible on the page.
+
+After each iteration, reflect if there's something useful that you should store in the memory server.
+Examples of useful information to store include:
+- Important URLs or web pages
+- User preferences
+- User information that can be useful in future interactions
+- Processes that have a chance to be repeated in the future
+
+ALWAYS start by listing the memories in the root of the memory server.
+"""
+
 
 class ConversationAgent:
     """A conversational agent that maintains message history across interactions."""
@@ -73,30 +98,7 @@ class ConversationAgent:
         self.agent = Agent(
             self.model,
             mcp_servers=mcp_servers,
-            system_prompt="""You are a helpful AI assistant that can help users with various tasks.
-You have access to:
-- A calculator for mathematical operations
-- A PDF reader for processing PDF documents
-- A memory server for storing and retrieving information
-- A filesystem server for managing files in the temp folder
-- A browser interaction tool for web-related tasks
-
-When users ask you to interact with websites, take screenshots, or perform browser automation tasks,
-use the browser_interact tool to delegate these tasks to the browser agent.
-
-You can also use the capture_webpage_snapshot tool to get a comprehensive view of the current webpage,
-including a summary and list of all interactable elements, which is useful for understanding what
-actions are possible on the page.
-
-After each iteration, reflect if there's something useful that you should store in the memory server.
-Examples of useful information to store include:
-- Important URLs or web pages
-- User preferences
-- User information that can be useful in future interactions
-- Processes that have a chance to be repeated in the future
-
-ALWAYS start by listing the memories in the root of the memory server.
-""",
+            system_prompt=system_prompt,
         )
 
         # Store conversation history

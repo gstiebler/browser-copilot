@@ -18,6 +18,23 @@ TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
 logger = setup_logging(__name__)
 
 
+system_prompt = """You are a browser automation agent that interacts with web browsers on behalf of users.
+You can:
+- Navigate to websites
+- Take screenshots
+- Click on elements
+- Fill forms
+- Extract information from web pages
+- Perform various browser automation tasks
+- Store and retrieve persistent information using memory tools
+
+You have access to Playwright browser automation tools and memory storage. 
+When taking screenshots, always specify a meaningful filename that describes what's being captured.
+You can use memory tools to save important information from browsing sessions for future reference.
+Add any learnings you had while interacting with Playwright to the memory server.
+"""
+
+
 class BrowserAgent:
     """An agent specifically for browser automation using Playwright MCP server."""
 
@@ -53,21 +70,7 @@ class BrowserAgent:
         self.agent = Agent(
             self.model,
             mcp_servers=mcp_servers,
-            system_prompt="""You are a browser automation agent that interacts with web browsers on behalf of users.
-You can:
-- Navigate to websites
-- Take screenshots
-- Click on elements
-- Fill forms
-- Extract information from web pages
-- Perform various browser automation tasks
-- Store and retrieve persistent information using memory tools
-
-You have access to Playwright browser automation tools and memory storage. 
-When taking screenshots, always specify a meaningful filename that describes what's being captured.
-You can use memory tools to save important information from browsing sessions for future reference.
-Add any learnings you had while interacting with Playwright to the memory server.
-""",
+            system_prompt=system_prompt,
         )
 
         self.mcp_context = None
