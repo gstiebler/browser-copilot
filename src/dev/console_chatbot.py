@@ -12,7 +12,7 @@ import logfire
 
 
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
-logfire.configure(token=LOGFIRE_TOKEN, scrubbing=False)  # type: ignore
+logfire.configure(token=LOGFIRE_TOKEN, scrubbing=False, service_name="test chatbot")  # type: ignore
 logfire.instrument_pydantic_ai()
 
 # Initialize rich console for colored output
@@ -27,7 +27,8 @@ MAIN_MODEL_NAME = os.getenv("MAIN_MODEL", "")
 system_prompt = """
 You are a browser automation assistant that helps a developer interact with web browsers,
 and troubleshoot issues with Playwright MCP server.
-Always execute one command at a time and wait for the user feedback before proceeding withe the next command.
+Always execute one command at a time and wait for the user feedback before proceeding with the next command.
+When multiple elements could match my instruction, always choose the one that appears first in the page snapshot.
 """
 
 
