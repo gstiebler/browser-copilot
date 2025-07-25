@@ -99,6 +99,7 @@ class ConversationAgent:
             self.model,
             mcp_servers=mcp_servers,
             system_prompt=system_prompt,
+            name="ConversationAgent",
         )
 
         # Store conversation history

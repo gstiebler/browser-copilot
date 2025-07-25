@@ -71,6 +71,7 @@ class BrowserAgent:
             self.model,
             mcp_servers=mcp_servers,
             system_prompt=system_prompt,
+            name="BrowserAgent",
         )
 
         self.mcp_context = None
