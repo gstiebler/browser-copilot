@@ -4,7 +4,7 @@ from typing import List, AsyncGenerator, Optional, Any
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
-from colorama import init, Fore, Style
+from rich.console import Console
 from ..model_config import get_model
 from ..log_config import setup_logging
 import logfire
@@ -14,8 +14,8 @@ LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
 logfire.configure(token=LOGFIRE_TOKEN, scrubbing=False)  # type: ignore
 logfire.instrument_pydantic_ai()
 
-# Initialize colorama for colored output
-init(autoreset=True)
+# Initialize rich console for colored output
+console = Console()
 
 # Set up logging
 logger = setup_logging(__name__)
@@ -78,7 +78,7 @@ class ConsoleAgent:
     def clear_history(self) -> None:
         """Clear the conversation history."""
         self.message_history = []
-        print(f"{Fore.YELLOW}Conversation history cleared.{Style.RESET_ALL}")
+        console.print("Conversation history cleared.", style="yellow")
 
     async def run_query(self, query: str) -> AsyncGenerator[str, None]:
         """
@@ -110,21 +110,21 @@ class ConsoleAgent:
 
 async def main():
     """Main console interaction loop."""
-    print(f"{Fore.CYAN}Browser Automation Console Chat{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{'=' * 40}{Style.RESET_ALL}")
-    print(f"Type {Fore.GREEN}/exit{Style.RESET_ALL} to quit")
-    print(f"Type {Fore.GREEN}/clear{Style.RESET_ALL} to clear conversation history")
+    console.print("Browser Automation Console Chat", style="cyan")
+    console.print("=" * 40, style="cyan")
+    console.print("Type [green]/exit[/green] to quit")
+    console.print("Type [green]/clear[/green] to clear conversation history")
     print()
 
     async with ConsoleAgent() as agent:
         while True:
             try:
                 # Get user input
-                user_input = input(f"{Fore.BLUE}> {Style.RESET_ALL}")
+                user_input = console.input("[blue]> [/blue]")
 
                 # Handle commands
                 if user_input.lower() in ["/exit", "/quit"]:
-                    print(f"{Fore.YELLOW}Goodbye!{Style.RESET_ALL}")
+                    console.print("Goodbye!", style="yellow")
                     break
                 elif user_input.lower() == "/clear":
                     agent.clear_history()
@@ -133,7 +133,7 @@ async def main():
                     continue
 
                 # Process the query
-                print(f"{Fore.GREEN}Assistant:{Style.RESET_ALL} ", end="", flush=True)
+                console.print("Assistant: ", style="green", end="")
 
                 response_parts = []
                 async for chunk in agent.run_query(user_input):
@@ -144,15 +144,15 @@ async def main():
                 print()  # Extra line for spacing
 
             except KeyboardInterrupt:
-                print(f"\n{Fore.YELLOW}Interrupted. Type /exit to quit.{Style.RESET_ALL}")
+                console.print("\nInterrupted. Type /exit to quit.", style="yellow")
                 continue
             except Exception as e:
                 logger.error(f"Error in main loop: {e}")
-                print(f"{Fore.RED}Error: {str(e)}{Style.RESET_ALL}")
+                console.print(f"Error: {str(e)}", style="red")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}Goodbye!{Style.RESET_ALL}")
+        console.print("\nGoodbye!", style="yellow")
