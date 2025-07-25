@@ -1,6 +1,7 @@
 import asyncio
 import os
 from typing import List, AsyncGenerator, Optional, Any
+import black
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
@@ -94,10 +95,10 @@ class ConsoleAgent:
             async with self.agent.iter(query, message_history=self.message_history) as agent_run:
                 async for node in agent_run:
                     # Extract text from the node if available
-                    if hasattr(node, "model_response") and hasattr(node.model_response, "parts"):
-                        for part in node.model_response.parts:
-                            if hasattr(part, "content") and isinstance(part.content, str):
-                                yield part.content
+                    formatted_str = black.format_str(repr(node), mode=black.Mode())
+                    # Replace \n with actual newlines
+                    formatted_str = formatted_str.replace("\\n", "\n")
+                    console.print(formatted_str, style="green")
 
                 # Update conversation history
                 if agent_run.result is not None:
