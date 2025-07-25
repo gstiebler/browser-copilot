@@ -22,7 +22,9 @@ LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
 # Set up logging
 logger = setup_logging(__name__)
 
-logfire.configure(token=LOGFIRE_TOKEN)
+file_log_level = os.getenv("FILE_LOG_LEVEL", "DEBUG").upper()
+logfire_scrubbing = False if file_log_level == "DEBUG" else None
+logfire.configure(token=LOGFIRE_TOKEN, scrubbing=logfire_scrubbing)  # type: ignore
 logfire.instrument_pydantic_ai()
 
 
