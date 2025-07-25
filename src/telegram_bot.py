@@ -11,7 +11,7 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
-from pydantic_mcp import ConversationAgent, TEMP_FOLDER
+from .pydantic_mcp import ConversationAgent, TEMP_FOLDER
 
 
 def escape_markdown_v2(text: str) -> str:

@@ -8,7 +8,7 @@ from pydantic_ai.messages import (
     TextPart,
     ToolReturnPart,
 )
-from log_config import setup_logging
+from .log_config import setup_logging
 from colorama import Fore, Style
 import black
 

@@ -9,11 +9,11 @@ from pydantic_ai.messages import (
 )
 import logfire
 from pydantic_graph import End
-from log_config import setup_logging
+from .log_config import setup_logging
 from colorama import Fore, Style
 import black
-from browser_agent import BrowserAgent
-from model_config import get_model
+from .browser_agent import BrowserAgent
+from .model_config import get_model
 
 
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
@@ -27,6 +27,9 @@ logfire.instrument_pydantic_ai()
 
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
+
+MAIN_MODEL_NAME = os.getenv("MAIN_MODEL", "")
+BROWSER_MODEL_NAME = os.getenv("BROWSER_MODEL", "")
 
 
 class ConversationAgent:
@@ -62,7 +65,7 @@ class ConversationAgent:
         ]
 
         # Initialize the model
-        self.model = get_model()
+        self.model = get_model(MAIN_MODEL_NAME)
 
         # Initialize the agent with MCP server
         self.agent = Agent(
@@ -182,7 +185,8 @@ ALWAYS start by listing the memories in the root of the memory server.
         await self.mcp_context.__aenter__()
 
         # Initialize browser agent
-        self.browser_agent = BrowserAgent(self.model)
+        browser_model = get_model(BROWSER_MODEL_NAME)
+        self.browser_agent = BrowserAgent(browser_model)
         await self.browser_agent.__aenter__()
 
         self._pending_screenshot = None
