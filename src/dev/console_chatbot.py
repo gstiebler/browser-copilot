@@ -7,6 +7,12 @@ from pydantic_ai.messages import ModelMessage
 from colorama import init, Fore, Style
 from ..model_config import get_model
 from ..log_config import setup_logging
+import logfire
+
+
+LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
+logfire.configure(token=LOGFIRE_TOKEN, scrubbing=False)  # type: ignore
+logfire.instrument_pydantic_ai()
 
 # Initialize colorama for colored output
 init(autoreset=True)
