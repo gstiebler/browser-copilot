@@ -1,7 +1,8 @@
 import asyncio
 import os
 from typing import List, AsyncGenerator, Optional, Any
-import black
+from rich.live import Live
+from rich.markdown import Markdown
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
@@ -22,13 +23,17 @@ console = Console()
 logger = setup_logging(__name__)
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
-MAIN_MODEL_NAME = os.getenv("MAIN_MODEL", "")
+BROWSER_MODEL_NAME = os.getenv("BROWSER_MODEL", "")
 
 system_prompt = """
 You are a browser automation assistant that helps a developer interact with web browsers,
 and troubleshoot issues with Playwright MCP server.
 Always execute one command at a time and wait for the user feedback before proceeding with the next command.
-When multiple elements could match my instruction, always choose the one that appears first in the page snapshot.
+NEVER RUN TWO COMMANDS IN A ROW!!! ALWAYS WAIT FOR THE USER TO CONFIRM BEFORE PROCEEDING WITH THE NEXT COMMAND.
+Before deciding which element to interact with, list the IDs of the elements that could be selected.
+Ignore `[cursor=pointer]` to decide which element is clickable or not.
+When multiple elements could be selected, always choose the element closer to the tree root.
+`generic` elements are clickable and selectable.
 """
 
 
@@ -52,7 +57,7 @@ class ConsoleAgent:
         ]
 
         # Initialize the model
-        self.model = get_model(MAIN_MODEL_NAME)
+        self.model = get_model(BROWSER_MODEL_NAME)
 
         # Initialize the agent
         self.agent = Agent(
@@ -92,22 +97,14 @@ class ConsoleAgent:
         Yields:
             Response text chunks
         """
-        try:
-            async with self.agent.iter(query, message_history=self.message_history) as agent_run:
-                async for node in agent_run:
-                    # Extract text from the node if available
-                    formatted_str = black.format_str(repr(node), mode=black.Mode())
-                    # Replace \n with actual newlines
-                    formatted_str = formatted_str.replace("\\n", "\n")
-                    console.print(formatted_str, style="green")
 
-                # Update conversation history
-                if agent_run.result is not None:
-                    self.message_history = agent_run.result.all_messages()
+        async with self.agent.run_stream(query, message_history=self.message_history) as result:
+            async for message in result.stream():
+                yield message
 
-        except Exception as e:
-            logger.error(f"Error running query: {e}")
-            yield f"Error: {str(e)}"
+            # Update conversation history
+            if result is not None:
+                self.message_history = result.all_messages()
 
 
 async def main():
@@ -138,9 +135,11 @@ async def main():
                 console.print("Assistant: ", style="green", end="")
 
                 response_parts = []
-                async for chunk in agent.run_query(user_input):
-                    print(chunk, end="", flush=True)
-                    response_parts.append(chunk)
+
+                with Live("", console=console, vertical_overflow="visible") as live:
+                    async for chunk in agent.run_query(user_input):
+                        live.update(Markdown(chunk))
+                        response_parts.append(chunk)
 
                 print()  # New line after response
                 print()  # Extra line for spacing

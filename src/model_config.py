@@ -1,7 +1,7 @@
 import os
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings, ThinkingConfig
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
@@ -14,6 +14,9 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 
 def get_model(full_model_name: str) -> Model:
+    gemini_thinking_config = ThinkingConfig(include_thoughts=True)
+    gemini_model_settings = GeminiModelSettings(gemini_thinking_config=gemini_thinking_config)
+
     model_parts = full_model_name.split("/")
     if len(model_parts) < 2:
         raise ValueError(
@@ -27,7 +30,9 @@ def get_model(full_model_name: str) -> Model:
             provider=OpenRouterProvider(api_key=OPENROUTER_API_KEY),
         ),
         "google": lambda: GeminiModel(
-            model_name, provider=GoogleGLAProvider(api_key=GEMINI_API_KEY)
+            model_name,
+            provider=GoogleGLAProvider(api_key=GEMINI_API_KEY),
+            settings=gemini_model_settings,
         ),
         "anthropic": lambda: AnthropicModel(
             model_name,
