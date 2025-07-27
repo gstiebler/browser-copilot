@@ -7,11 +7,6 @@ requires-python = ">=3.10"
 dependencies = [
     "black>=25.1.0",
     "colorama>=0.4.6",
-    "langchain-anthropic>=0.3.15",
-    "langchain-openai>=0.3.24",
-    "langchain-tavily>=0.2.4",
-    "langchain[google-genai]>=0.3.26",
-    "langgraph>=0.4.8",
     "logfire>=3.21.1",
     "mcp[cli]>=1.9.4",
     "nest-asyncio>=1.6.0",
