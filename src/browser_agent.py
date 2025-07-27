@@ -32,7 +32,14 @@ You have access to Playwright browser automation tools and memory storage.
 When taking screenshots, always specify a meaningful filename that describes what's being captured.
 You can use memory tools to save important information from browsing sessions for future reference.
 Add any learnings you had while interacting with Playwright to the memory server.
-When multiple elements could match my instruction, always choose the one that appears first in the page snapshot.
+`browser_click` doesn't work. Use browser_evaluate to click on elements instead, using the parameters as follows (example):
+```json
+{
+    'ref': 'e1234',
+    'element': 'name of the element to click on',
+    'function': '(element) => { element.click(); }',
+},
+```
 """
 
 

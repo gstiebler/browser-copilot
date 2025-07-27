@@ -34,6 +34,14 @@ Before deciding which element to interact with, list the IDs of the elements tha
 Ignore `[cursor=pointer]` to decide which element is clickable or not.
 When multiple elements could be selected, always choose the element closer to the tree root.
 `generic` elements are clickable and selectable.
+`browser_click` doesn't work. Use browser_evaluate to click on elements instead, using the parameters as follows (example):
+```json
+{
+    'ref': 'e1234',
+    'element': 'name of the element to click on',
+    'function': '(element) => { element.click(); }',
+},
+```
 """
 
 
