@@ -1,6 +1,7 @@
 import asyncio
 import os
 from typing import List, AsyncGenerator, Any, Optional
+from colorama import Fore, Style
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
@@ -10,7 +11,6 @@ from pydantic_ai.messages import (
 import logfire
 from pydantic_graph import End
 from .log_config import setup_logging
-from colorama import Fore, Style
 import black
 from .browser_agent import BrowserAgent
 from .model_config import get_model
@@ -24,7 +24,7 @@ logger = setup_logging(__name__)
 
 file_log_level = os.getenv("FILE_LOG_LEVEL", "DEBUG").upper()
 logfire_scrubbing = False if file_log_level == "DEBUG" else None
-logfire.configure(token=LOGFIRE_TOKEN, scrubbing=logfire_scrubbing)  # type: ignore
+logfire.configure(token=LOGFIRE_TOKEN, scrubbing=logfire_scrubbing, service_name="pydantic_ai")  # type: ignore
 logfire.instrument_pydantic_ai()
 
 
@@ -267,7 +267,7 @@ async def main():
         # Example 2: Taking a screenshot
         logger.info("Open the Canada Life website, and take a screenshot")
         logger.info("\n=== Example 2: Taking a screenshot ===")
-        async for chunk in agent.run_query("Open the Canada Life website, and take a screenshot"):
+        async for chunk in agent.run_query("Open the Canada Life website"):
             logger.info(chunk)
 
         logger.info(black.format_str(repr(agent.get_messages()), mode=black.Mode()))

@@ -3,6 +3,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from typing import Optional
+from rich.console import Console
+
+console = Console()
 
 
 def setup_logging(logger_name: Optional[str] = None):

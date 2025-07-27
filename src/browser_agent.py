@@ -1,6 +1,8 @@
 import json
 import os
 from typing import List, Any, Optional, AsyncGenerator, Dict
+import black
+from colorama import Fore, Style
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
@@ -9,8 +11,6 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from .log_config import setup_logging
-from colorama import Fore, Style
-import black
 
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
