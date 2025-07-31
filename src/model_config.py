@@ -12,9 +12,11 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
+thinking_budget = 1000
+
 
 def get_model(full_model_name: str) -> Model:
-    gemini_thinking_config = ThinkingConfig(include_thoughts=True)
+    gemini_thinking_config = ThinkingConfig(include_thoughts=True, thinking_budget=thinking_budget)
     gemini_model_settings = GeminiModelSettings(gemini_thinking_config=gemini_thinking_config)
 
     model_parts = full_model_name.split("/")
