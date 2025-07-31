@@ -255,17 +255,17 @@ class ConversationAgent:
 
 async def main():
     """Simple usage example demonstrating the ConversationAgent."""
-    logger.info("Starting ConversationAgent example")
+    console.log(Markdown("# Starting ConversationAgent example"))
 
     # Create a conversation agent
     async with ConversationAgent() as agent:
         # Example 2: Taking a screenshot
-        logger.info("Open the Canada Life website, and take a screenshot")
-        logger.info("\n=== Example 2: Taking a screenshot ===")
+        console.log(Markdown("## Example 2: Taking a screenshot"))
         async for chunk in agent.run_query("Open the Canada Life website"):
-            logger.info(chunk)
+            console.log(chunk)
 
-        logger.info(black.format_str(repr(agent.get_messages()), mode=black.Mode()))
+        console.log(Markdown("## Conversation History"))
+        console.log(black.format_str(repr(agent.get_messages()), mode=black.Mode()))
 
 
 if __name__ == "__main__":

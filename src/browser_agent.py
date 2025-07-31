@@ -110,12 +110,8 @@ class BrowserAgent:
             Dictionaries containing response chunks and screenshot info
         """
         async with self.agent.iter(task, usage=usage) as agent_run:
-            nodes_so_far = []
-
             console.log(Markdown("## execute_browser_task"))
             async for node in agent_run:
-                nodes_so_far.append(node)
-
                 # Log node processing
                 color_by_node: dict[type, str] = {
                     CallToolsNode: "[bold green]",
@@ -128,14 +124,9 @@ class BrowserAgent:
                     f"{color}{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
-                # Check for screenshots
-                screenshot_result = self._process_screenshot_nodes(nodes_so_far)
-                if screenshot_result:
-                    yield screenshot_result
-
             yield {
                 "type": "text",
-                "text": agent_run.result.all_messages(),  # type: ignore
+                "text": agent_run.result.output,  # type: ignore
             }
 
     def _process_screenshot_nodes(self, nodes: List[Any]) -> Optional[dict]:
