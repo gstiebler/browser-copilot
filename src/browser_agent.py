@@ -2,7 +2,7 @@ import json
 import os
 from typing import List, Any, Optional, AsyncGenerator, Dict
 import black
-from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
+from pydantic_ai import Agent, CallToolsNode, ModelRequestNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
     ToolCallPart,
@@ -112,16 +112,9 @@ class BrowserAgent:
         async with self.agent.iter(task, usage=usage) as agent_run:
             console.log(Markdown("## execute_browser_task"))
             async for node in agent_run:
-                # Log node processing
-                color_by_node: dict[type, str] = {
-                    CallToolsNode: "[bold green]",
-                    ModelRequestNode: "[bold blue]",
-                    UserPromptNode: "[bold yellow]",
-                }
-                color = color_by_node.get(type(node), "[bold white]")
                 console.log(Markdown("### execute_browser_task node"))
                 console.print(
-                    f"{color}{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
+                    f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
             yield {

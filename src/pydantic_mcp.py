@@ -1,7 +1,7 @@
 import asyncio
 import os
 from typing import List, AsyncGenerator, Any, Optional
-from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode, RunContext
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
     ModelMessage,
@@ -219,16 +219,9 @@ class ConversationAgent:
             async for node in agent_run:
                 nodes_so_far.append(node)
 
-                # Log node processing
-                color_by_node: dict[type, str] = {
-                    CallToolsNode: "[bold green]",
-                    ModelRequestNode: "[bold blue]",
-                    UserPromptNode: "[bold yellow]",
-                }
-                color = color_by_node.get(type(node), "[bold white]")
                 console.log(Markdown("### pydantic mcp node"))
                 console.print(
-                    f"{color}{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
+                    f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
                 # Check if we have a pending screenshot from browser agent
@@ -245,7 +238,7 @@ class ConversationAgent:
                 self.message_history = agent_run.result.all_messages()
                 yield {
                     "type": "text",
-                    "text": agent_run.result,
+                    "text": agent_run.result.output,  # type: ignore
                 }
 
     def get_messages(self) -> List[ModelMessage]:
