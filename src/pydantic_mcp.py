@@ -1,19 +1,17 @@
 import asyncio
 import os
 from typing import List, AsyncGenerator, Any, Optional
-from colorama import Fore, Style
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
     ModelMessage,
-    TextPart,
 )
 import logfire
-from pydantic_graph import End
-from .log_config import setup_logging
+from .log_config import setup_logging, console
 import black
 from .browser_agent import BrowserAgent
 from .model_config import get_model
+from rich.markdown import Markdown
 
 
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
@@ -217,29 +215,22 @@ class ConversationAgent:
         # Run the query with existing message history
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
             nodes_so_far = []
+            console.log(Markdown("## pydantic mcp"))
             async for node in agent_run:
                 nodes_so_far.append(node)
+
+                # Log node processing
                 color_by_node: dict[type, str] = {
-                    CallToolsNode: Fore.GREEN,
-                    ModelRequestNode: Fore.BLUE,
-                    UserPromptNode: Fore.YELLOW,
-                    End: Fore.MAGENTA,
+                    CallToolsNode: "[bold green]",
+                    ModelRequestNode: "[bold blue]",
+                    UserPromptNode: "[bold yellow]",
                 }
-                color = color_by_node.get(type(node), Fore.RED)
-                logger.debug(
-                    f"Processing node: {color}{black.format_str(repr(node), mode=black.Mode())}{Style.RESET_ALL}"
+                color = color_by_node.get(type(node), "[bold white]")
+                console.log(Markdown("### pydantic mcp node"))
+                console.print(
+                    f"{color}{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
-                # if isinstance(node, End):
-                #     yield {"type": "text", "node_type": "End", "text": node.data.output}
-                if isinstance(node, CallToolsNode):
-                    for part in node.model_response.parts:
-                        if isinstance(part, TextPart):
-                            result = {
-                                "type": "text",
-                                "node_type": "CallToolsNode",
-                                "text": part.content,
-                            }
-                            yield result
+
                 # Check if we have a pending screenshot from browser agent
                 if self._pending_screenshot:
                     yield {
@@ -252,6 +243,10 @@ class ConversationAgent:
             if agent_run.result is not None:
                 # Store conversation history
                 self.message_history = agent_run.result.all_messages()
+                yield {
+                    "type": "text",
+                    "text": agent_run.result,
+                }
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""

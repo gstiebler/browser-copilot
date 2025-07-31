@@ -2,7 +2,6 @@ import json
 import os
 from typing import List, Any, Optional, AsyncGenerator, Dict
 import black
-from colorama import Fore, Style
 from pydantic_ai import Agent, CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
@@ -10,7 +9,8 @@ from pydantic_ai.messages import (
     TextPart,
     ToolReturnPart,
 )
-from .log_config import setup_logging
+from .log_config import setup_logging, console
+from rich.markdown import Markdown
 
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
@@ -112,33 +112,31 @@ class BrowserAgent:
         async with self.agent.iter(task, usage=usage) as agent_run:
             nodes_so_far = []
 
+            console.log(Markdown("## execute_browser_task"))
             async for node in agent_run:
                 nodes_so_far.append(node)
 
                 # Log node processing
                 color_by_node: dict[type, str] = {
-                    CallToolsNode: Fore.GREEN,
-                    ModelRequestNode: Fore.BLUE,
-                    UserPromptNode: Fore.YELLOW,
+                    CallToolsNode: "[bold green]",
+                    ModelRequestNode: "[bold blue]",
+                    UserPromptNode: "[bold yellow]",
                 }
-                color = color_by_node.get(type(node), Fore.RED)
-                logger.debug(
-                    f"BrowserAgent processing node: {color}{black.format_str(repr(node), mode=black.Mode())}{Style.RESET_ALL}"
+                color = color_by_node.get(type(node), "[bold white]")
+                console.log(Markdown("### execute_browser_task node"))
+                console.print(
+                    f"{color}{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
-
-                # Yield text responses
-                if isinstance(node, CallToolsNode):
-                    for part in node.model_response.parts:
-                        if isinstance(part, TextPart):
-                            yield {
-                                "type": "text",
-                                "text": part.content,
-                            }
 
                 # Check for screenshots
                 screenshot_result = self._process_screenshot_nodes(nodes_so_far)
                 if screenshot_result:
                     yield screenshot_result
+
+            yield {
+                "type": "text",
+                "text": agent_run.result.all_messages(),  # type: ignore
+            }
 
     def _process_screenshot_nodes(self, nodes: List[Any]) -> Optional[dict]:
         """
@@ -200,9 +198,8 @@ class BrowserAgent:
             - screenshot_path: Path to the screenshot if taken
         """
         snapshot_prompt = """Please:
-1. Take a screenshot of the current page
-2. Use browser_snapshot to get the accessibility tree
-3. Analyze the snapshot and provide:
+1. Use browser_snapshot to get the accessibility tree
+2. Analyze the snapshot and provide:
    - A brief summary of what the page contains
    - A comprehensive list of ALL interactable elements (buttons, links, inputs, dropdowns, etc.)
    
@@ -230,9 +227,11 @@ etc."""
             full_response = []
             nodes_collected = []
 
+            console.log(Markdown("## capture_page_snapshot"))
             async for node in agent_run:
                 nodes_collected.append(node)
 
+                console.log(Markdown("### capture_page_snapshot node"))
                 # Collect text responses
                 if isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:

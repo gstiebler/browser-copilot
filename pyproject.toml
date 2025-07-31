@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "black>=25.1.0",
-    "colorama>=0.4.6",
     "logfire>=3.21.1",
     "mcp[cli]>=1.9.4",
     "nest-asyncio>=1.6.0",
@@ -22,7 +21,6 @@ dev = [
     "mypy>=1.16.1",
     "pre-commit>=4.2.0",
     "ruff>=0.12.2",
-    "types-colorama>=0.4.15.20240311",
 ]
 
 [tool.ruff]
