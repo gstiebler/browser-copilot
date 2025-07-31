@@ -40,7 +40,7 @@ def setup_logging(logger_name: Optional[str] = None):
 
     # Set different log levels for each handler
     file_log_level = os.getenv("FILE_LOG_LEVEL", "DEBUG").upper()
-    console_log_level = os.getenv("CONSOLE_LOG_LEVEL", "INFO").upper()
+    console_log_level = os.getenv("CONSOLE_LOG_LEVEL", "WARNING").upper()
 
     file_handler.setLevel(getattr(logging, file_log_level))
     console_handler.setLevel(getattr(logging, console_log_level))
