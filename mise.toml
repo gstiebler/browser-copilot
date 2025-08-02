@@ -1,0 +1,104 @@
+[tools]
+python = "3.13"
+uv = "latest"
+ruff = "latest"
+mypy = "latest"
+pre-commit = "latest"
+node = "20"  # For MCP servers like Playwright
+
+[env]
+# Default environment variables for development
+_.python.venv = { path = ".venv", create = true }
+PYTHONPATH = "."
+
+[tasks.pydantic_mcp]
+run = "uv run -m src.pydantic_mcp"
+description = "Run the Pydantic MCP agent standalone"
+
+[tasks.telegram_bot]
+run = "uv run -m src.telegram_bot"
+description = "Run the Telegram bot (main entry point)"
+
+[tasks.browser_agent]
+run = "uv run -m src.browser_agent"
+description = "Test the browser agent standalone"
+
+[tasks.lint]
+run = "uv run ruff check . && uv run ruff format ."
+description = "Run linting and formatting"
+
+[tasks.typecheck]
+run = "uv run mypy ."
+description = "Run type checking"
+
+[tasks.test]
+run = "uv run pytest"
+description = "Run tests"
+
+[tasks.pre-commit]
+run = "pre-commit run --all-files"
+description = "Run pre-commit hooks"
+
+[tasks.install]
+run = "uv sync"
+description = "Install/sync dependencies"
+
+[tasks.dev]
+run = """
+echo "Starting Telegram bot in development mode..."
+CONSOLE_LOG_LEVEL=DEBUG WAIT_FOR_INPUT=true uv run -m src.telegram_bot
+"""
+description = "Run Telegram bot in development mode with debug logging"
+
+[tasks.setup]
+run = """
+uv sync
+cp -n .env.example .env || true
+echo "✅ Dependencies installed"
+echo "⚠️  Please edit .env with your API keys"
+"""
+description = "Initial project setup"
+
+[tasks.clean]
+run = """
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find . -type f -name "*.pyc" -delete 2>/dev/null || true
+find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+echo "✅ Cleaned Python cache files"
+"""
+description = "Clean Python cache files"
+
+[tasks.check]
+run = """
+mise run lint
+mise run typecheck
+mise run test
+echo "✅ All checks passed!"
+"""
+description = "Run all quality checks (lint, typecheck, test)"
+
+[tasks.mcp-install]
+run = """
+echo "Installing MCP servers..."
+npx @playwright/mcp@latest install
+echo "✅ MCP servers installed"
+"""
+description = "Install required MCP servers"
+
+[tasks.logs]
+run = "tail -f *.log 2>/dev/null || echo 'No log files found'"
+description = "Tail all log files"
+
+[tasks.env-check]
+run = """
+echo "Checking environment configuration..."
+[ -f .env ] || echo "❌ .env file not found"
+[ -f .env ] && grep -q "TELEGRAM_TOKEN=." .env || echo "⚠️  TELEGRAM_TOKEN not set"
+[ -f .env ] && grep -q "ANTHROPIC_API_KEY=." .env || echo "⚠️  ANTHROPIC_API_KEY not set"
+[ -f .env ] && grep -q "OPENROUTER_API_KEY=." .env || echo "⚠️  OPENROUTER_API_KEY not set"
+[ -f .env ] && grep -q "GEMINI_API_KEY=." .env || echo "⚠️  GEMINI_API_KEY not set"
+echo "ℹ️  At least one AI provider API key should be configured"
+"""
+description = "Check environment configuration"
