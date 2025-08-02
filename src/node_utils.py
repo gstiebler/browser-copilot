@@ -2,8 +2,9 @@
 
 import json
 import black
-from pydantic_ai import CallToolsNode, ModelRequestNode
+from pydantic_ai import CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.messages import (
+    TextPart,
     ToolReturnPart,
     ThinkingPart,
     ToolCallPart,
@@ -32,10 +33,12 @@ def print_node(node):
                         log_markdown(str(part.content))
                 elif isinstance(part, UserPromptPart):
                     log_markdown("### User Prompt Part")
-                    log_markdown(part.content)  # type: ignore
+                    log_markdown(str(part.content))
                 elif isinstance(part, SystemPromptPart):
                     log_markdown("### System Prompt Part")
                     log_markdown(part.content)
+                else:
+                    raise ValueError(f"Unknown part type: {type(part)} in ModelRequestNode")
         elif isinstance(node, CallToolsNode):
             # Handle tool calls
             for part in node.model_response.parts:
@@ -44,11 +47,29 @@ def print_node(node):
                     log_markdown(part.content)
                 elif isinstance(part, ToolCallPart):
                     log_markdown("### Tool Call Part")
-                    log_markdown(f"`Tool call: `{part.tool_name}`")
-                    log_markdown(f"Arguments: ```json \n{part.args}\n```")
+                    log_markdown(f"Tool call: `{part.tool_name}`")
+                    log_markdown(f"Arguments: \n```json\n{part.args}\n```")
+                elif isinstance(part, TextPart):
+                    log_markdown("### Text Part")
+                    log_markdown(part.content)
+                else:
+                    raise ValueError(f"Unknown part type: {type(part)} in CallToolsNode")
         elif isinstance(node, End):
             # End of the agent run
             log_markdown("### End of Agent Run")
+        elif isinstance(node, UserPromptNode):
+            # User prompt node
+            log_markdown("### User Prompt Node")
+            log_markdown(str(node.user_prompt))
+            log_markdown("### System prompts:")
+            for prompt in node.system_prompts:
+                log_markdown(f"- {prompt}")
+        else:
+            # Unknown node type - print it directly
+            log_markdown(f"### Unknown Node Type: {type(node).__name__}")
+            console.print(
+                f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
+            )
     except Exception as e:
         log_markdown(f"Error processing node: {e}")
         console.print(
