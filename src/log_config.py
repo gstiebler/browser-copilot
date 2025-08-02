@@ -4,8 +4,53 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from typing import Optional
 from rich.console import Console
+from rich.markdown import Markdown
+from pathlib import Path
 
 console = Console()
+
+# Session-specific markdown log file
+_session_markdown_file: Optional[Path] = None
+
+
+def get_session_markdown_file() -> Path:
+    """Get or create the session-specific markdown log file."""
+    global _session_markdown_file
+    if _session_markdown_file is None:
+        # Create markdown log directory if it doesn't exist
+        markdown_dir = Path("markdown_logs")
+        markdown_dir.mkdir(exist_ok=True)
+
+        # Create session-specific file with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        _session_markdown_file = markdown_dir / f"session_{timestamp}.md"
+
+        # Write header to the file
+        with open(_session_markdown_file, "w", encoding="utf-8") as f:
+            f.write(f"# Session Log - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+
+    return _session_markdown_file
+
+
+def log_markdown(content: str) -> None:
+    """
+    Log markdown content both to console and to a session-specific markdown file.
+
+    Args:
+        content: The markdown content to log
+    """
+    # Log to console
+    console.log(Markdown(content))
+
+    # Write to markdown file
+    markdown_file = get_session_markdown_file()
+    with open(markdown_file, "a", encoding="utf-8") as f:
+        # Add timestamp before each entry
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        f.write(f"\n<!-- {timestamp} -->\n")
+        f.write(content)
+        f.write("\n")
+        f.flush()  # Ensure content is written immediately
 
 
 def setup_logging(logger_name: Optional[str] = None):

@@ -16,5 +16,6 @@ wheels/
 .mypy_cache
 .ruff_cache
 log
+markdown_logs
 .vscode
 memory.json

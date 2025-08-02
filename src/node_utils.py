@@ -11,8 +11,7 @@ from pydantic_ai.messages import (
     SystemPromptPart,
 )
 from pydantic_graph import End
-from rich.markdown import Markdown
-from .log_config import console
+from .log_config import console, log_markdown
 
 
 def print_node(node):
@@ -22,36 +21,36 @@ def print_node(node):
             # Process model request nodes
             for part in node.request.parts:
                 if isinstance(part, ToolReturnPart):
-                    console.log(Markdown("### Tool Return Part"))
-                    console.log(Markdown(f"Tool call: {part.tool_name}"))
+                    log_markdown("### Tool Return Part")
+                    log_markdown(f"Tool call: `{part.tool_name}`")
 
                     # Check if content is a dict and format it as JSON
                     if isinstance(part.content, dict):
                         formatted_json = json.dumps(part.content, indent=2)
-                        console.log(Markdown(f"```json\n{formatted_json}\n```"))
+                        log_markdown(f"```json\n{formatted_json}\n```")
                     else:
-                        console.log(Markdown(str(part.content)))
+                        log_markdown(str(part.content))
                 elif isinstance(part, UserPromptPart):
-                    console.log(Markdown("### User Prompt Part"))
-                    console.log(Markdown(part.content))  # type: ignore
+                    log_markdown("### User Prompt Part")
+                    log_markdown(part.content)  # type: ignore
                 elif isinstance(part, SystemPromptPart):
-                    console.log(Markdown("### System Prompt Part"))
-                    console.log(Markdown(part.content))
+                    log_markdown("### System Prompt Part")
+                    log_markdown(part.content)
         elif isinstance(node, CallToolsNode):
             # Handle tool calls
             for part in node.model_response.parts:
                 if isinstance(part, ThinkingPart):
-                    console.log(Markdown("### Thinking Part"))
-                    console.log(Markdown(part.content))
+                    log_markdown("### Thinking Part")
+                    log_markdown(part.content)
                 elif isinstance(part, ToolCallPart):
-                    console.log(Markdown("### Tool Call Part"))
-                    console.log(Markdown(f"Tool call: {part.tool_name}"))
-                    console.log(Markdown(f"Arguments: ```json {part.args}```"))
+                    log_markdown("### Tool Call Part")
+                    log_markdown(f"`Tool call: `{part.tool_name}`")
+                    log_markdown(f"Arguments: ```json \n{part.args}\n```")
         elif isinstance(node, End):
             # End of the agent run
-            console.log(Markdown("### End of Agent Run"))
+            log_markdown("### End of Agent Run")
     except Exception as e:
-        console.log(Markdown(f"Error processing node: {e}"))
+        log_markdown(f"Error processing node: {e}")
         console.print(
             f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
         )

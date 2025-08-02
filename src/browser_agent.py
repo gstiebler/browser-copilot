@@ -11,8 +11,7 @@ from pydantic_ai.messages import (
 )
 
 from .input_utils import wait_for_input
-from .log_config import setup_logging, console
-from rich.markdown import Markdown
+from .log_config import setup_logging, log_markdown
 from .node_utils import print_node
 
 
@@ -113,9 +112,9 @@ class BrowserAgent:
             Dictionaries containing response chunks and screenshot info
         """
         async with self.agent.iter(task, usage=usage) as agent_run:
-            console.log(Markdown("## execute_browser_task"))
+            log_markdown("## execute_browser_task")
             async for node in agent_run:
-                console.log(Markdown("### execute_browser_task node"))
+                log_markdown("### execute_browser_task node")
                 print_node(node)
 
                 # Pause and wait for user confirmation
@@ -218,7 +217,7 @@ etc."""
             full_response = []
             nodes_collected = []
 
-            console.log(Markdown("## capture_page_snapshot"))
+            log_markdown("## capture_page_snapshot")
             async for node in agent_run:
                 print_node(node)  # type: ignore
 
@@ -228,7 +227,7 @@ etc."""
                 )
                 nodes_collected.append(node)
 
-                console.log(Markdown("### capture_page_snapshot node"))
+                log_markdown("### capture_page_snapshot node")
                 # Collect text responses
                 if isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:

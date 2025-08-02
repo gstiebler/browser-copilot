@@ -7,11 +7,10 @@ from pydantic_ai.messages import ModelMessage
 import logfire
 
 from src.input_utils import wait_for_input
-from .log_config import setup_logging, console
+from .log_config import setup_logging, console, log_markdown
 import black
 from .browser_agent import BrowserAgent
 from .model_config import get_model
-from rich.markdown import Markdown
 from .node_utils import print_node
 
 
@@ -215,9 +214,9 @@ class ConversationAgent:
         """
         # Run the query with existing message history
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
-            console.log(Markdown("## pydantic mcp"))
+            log_markdown("## pydantic mcp")
             async for node in agent_run:
-                console.log(Markdown("### pydantic mcp node"))
+                log_markdown("### pydantic mcp node")
                 logger.debug(
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
@@ -251,12 +250,12 @@ class ConversationAgent:
 
 async def main():
     """Simple usage example demonstrating the ConversationAgent."""
-    console.log(Markdown("# Starting ConversationAgent example"))
+    log_markdown("# Starting ConversationAgent example")
 
     # Create a conversation agent
     async with ConversationAgent() as agent:
         # Example 2: Taking a screenshot
-        console.log(Markdown("## Example 2: Taking a screenshot"))
+        log_markdown("## Example 2: Taking a screenshot")
         async for chunk in agent.run_query("Open the Canada Life website"):
             console.log(chunk)
 
