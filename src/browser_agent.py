@@ -1,13 +1,10 @@
-import json
 import os
-from typing import List, Any, Optional, AsyncGenerator, Dict
+from typing import Any, AsyncGenerator, Dict
 import black
-from pydantic_ai import Agent, CallToolsNode, ModelRequestNode
+from pydantic_ai import Agent, CallToolsNode
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import (
-    ToolCallPart,
     TextPart,
-    ToolReturnPart,
 )
 
 from .input_utils import wait_for_input
@@ -53,28 +50,29 @@ class BrowserAgent:
         self.model = model
 
         # Initialize the Playwright and Memory MCP servers
-        mcp_servers = [
-            MCPServerStdio(
-                "npx",
-                args=[
-                    "@playwright/mcp@latest",
-                    "--output-dir",
-                    TEMP_FOLDER,
-                    "--image-responses",
-                    "omit",
-                ],
-            ),
-            MCPServerStdio(
-                "uvx",
-                args=[
-                    "--from",
-                    "git+https://github.com/gstiebler/h-memory-mcp-server.git",
-                    "h-memory-mcp-server",
-                    "--memory-file",
-                    "memory.json",
-                ],
-            ),
-        ]
+        self.playwright_server = MCPServerStdio(
+            "npx",
+            args=[
+                "@playwright/mcp@latest",
+                "--output-dir",
+                TEMP_FOLDER,
+                "--image-responses",
+                "omit",
+            ],
+        )
+
+        memory_server = MCPServerStdio(
+            "uvx",
+            args=[
+                "--from",
+                "git+https://github.com/gstiebler/h-memory-mcp-server.git",
+                "h-memory-mcp-server",
+                "--memory-file",
+                "memory.json",
+            ],
+        )
+
+        mcp_servers = [self.playwright_server, memory_server]
 
         # Initialize the agent with browser-specific system prompt
         self.agent = Agent(
@@ -101,7 +99,7 @@ class BrowserAgent:
         self, task: str, usage: Any = None
     ) -> AsyncGenerator[dict, None]:
         """
-        Execute a browser task and yield results including screenshots.
+        Execute a browser task and yield results.
 
         Args:
             task: The browser task to execute
@@ -115,7 +113,7 @@ class BrowserAgent:
             log_markdown("## execute_browser_task")
             async for node in agent_run:
                 log_markdown("### execute_browser_task node")
-                print_node(node)
+                print_node(node, 4)
 
                 # Pause and wait for user confirmation
                 wait_for_input()
@@ -128,55 +126,6 @@ class BrowserAgent:
                 "text": agent_run.result.output,  # type: ignore
             }
 
-    def _process_screenshot_nodes(self, nodes: List[Any]) -> Optional[dict]:
-        """
-        Process nodes to find browser screenshot results.
-
-        Args:
-            nodes: List of nodes to process
-
-        Returns:
-            Dictionary with screenshot info if found, None otherwise
-        """
-        for i in range(1, len(nodes)):
-            previous_node = nodes[i - 1]
-            current_node = nodes[i]
-
-            if not isinstance(current_node, ModelRequestNode):
-                continue
-
-            previous_node_parts = (
-                previous_node.model_response.parts
-                if hasattr(previous_node, "model_response")
-                else []
-            )
-            previous_node_tool_call_part = next(
-                (part for part in previous_node_parts if isinstance(part, ToolCallPart)),
-                None,
-            )
-
-            for part in current_node.request.parts:
-                if (
-                    isinstance(part, ToolReturnPart)
-                    and previous_node_tool_call_part
-                    and part.tool_name
-                    == previous_node_tool_call_part.tool_name
-                    == "browser_take_screenshot"
-                ):
-                    if isinstance(previous_node_tool_call_part.args, str):
-                        parsed_args = json.loads(previous_node_tool_call_part.args)
-                    elif isinstance(previous_node_tool_call_part.args, dict):
-                        parsed_args = previous_node_tool_call_part.args
-                    else:
-                        parsed_args = {}
-
-                    return {
-                        "type": "image",
-                        "filename": f"{TEMP_FOLDER}/{parsed_args.get('filename', 'screenshot.png')}",
-                    }
-
-        return None
-
     async def capture_page_snapshot(self, usage: Any = None) -> Dict[str, Any]:
         """
         Capture a snapshot of the current web page and analyze it to extract interactable elements.
@@ -187,6 +136,38 @@ class BrowserAgent:
             - interactable_elements: List of all clickable/fillable elements with their details
             - screenshot_path: Path to the screenshot if taken
         """
+        from datetime import datetime
+
+        result: Dict[str, Any] = {
+            "page_summary": "",
+            "interactable_elements": [],
+            "screenshot_path": None,
+        }
+
+        # First, ALWAYS capture a screenshot directly via MCP
+        try:
+            if self.mcp_context:
+                # Generate filename with current datetime
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                screenshot_filename = f"page-snapshot-{timestamp}.png"
+
+                # Call the screenshot tool directly using the Playwright server property
+                screenshot_result = await self.playwright_server.call_tool(
+                    "browser_take_screenshot", {"filename": screenshot_filename}
+                )
+                logger.debug(f"Screenshot taken: {screenshot_result}")
+
+                # Set the screenshot path
+                screenshot_path = f"{TEMP_FOLDER}/{screenshot_filename}"
+                result["screenshot_path"] = screenshot_path
+
+                # Log the screenshot in markdown
+                log_markdown(f"![Screenshot]({screenshot_filename})")
+
+        except Exception as e:
+            logger.warning(f"Failed to capture screenshot directly: {e}")
+
+        # Now get the accessibility snapshot and analyze it
         snapshot_prompt = """Please:
 1. Use browser_snapshot to get the accessibility tree
 2. Analyze the snapshot and provide:
@@ -207,37 +188,24 @@ INTERACTABLE ELEMENTS:
 - [element details]
 etc."""
 
-        result: Dict[str, Any] = {
-            "page_summary": "",
-            "interactable_elements": [],
-            "screenshot_path": None,
-        }
-
         async with self.agent.iter(snapshot_prompt, usage=usage) as agent_run:
             full_response = []
-            nodes_collected = []
 
-            log_markdown("## capture_page_snapshot")
+            log_markdown("### capture_page_snapshot")
             async for node in agent_run:
-                print_node(node)  # type: ignore
+                print_node(node, 4)
 
                 wait_for_input()
                 logger.debug(
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
-                nodes_collected.append(node)
 
-                log_markdown("### capture_page_snapshot node")
+                log_markdown("#### capture_page_snapshot node")
                 # Collect text responses
                 if isinstance(node, CallToolsNode):
                     for part in node.model_response.parts:
                         if isinstance(part, TextPart):
                             full_response.append(part.content)
-
-                # Check for screenshot
-                screenshot_info = self._process_screenshot_nodes(nodes_collected)
-                if screenshot_info:
-                    result["screenshot_path"] = screenshot_info["filename"]
 
             # Process the response to extract summary and elements
             full_text = "\n".join(full_response)

@@ -214,14 +214,14 @@ class ConversationAgent:
         """
         # Run the query with existing message history
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
-            log_markdown("## pydantic mcp")
+            log_markdown("# pydantic mcp")
             async for node in agent_run:
-                log_markdown("### pydantic mcp node")
+                log_markdown("## pydantic mcp node")
                 logger.debug(
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
-                print_node(node)
+                print_node(node, 3)
 
                 # Pause and wait for user confirmation
                 wait_for_input()
@@ -254,9 +254,9 @@ async def main():
 
     # Create a conversation agent
     async with ConversationAgent() as agent:
-        # Example 2: Taking a screenshot
-        log_markdown("## Example 2: Taking a screenshot")
-        async for chunk in agent.run_query("Open the Canada Life website"):
+        async for chunk in agent.run_query(
+            "Open the Canada Life website (www.canadalife.com) and take a snapshot"
+        ):
             console.log(chunk)
 
 
