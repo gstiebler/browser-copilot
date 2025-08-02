@@ -1,11 +1,8 @@
 import os
 from typing import Any, AsyncGenerator, Dict
 import black
-from pydantic_ai import Agent, CallToolsNode
+from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
-from pydantic_ai.messages import (
-    TextPart,
-)
 
 from .input_utils import wait_for_input
 from .log_config import setup_logging, log_markdown
@@ -132,15 +129,13 @@ class BrowserAgent:
 
         Returns:
             Dictionary containing:
-            - page_summary: Brief description of the page
-            - interactable_elements: List of all clickable/fillable elements with their details
+            - page_summary: Brief description of the page, and a list of all clickable/fillable elements with their details
             - screenshot_path: Path to the screenshot if taken
         """
         from datetime import datetime
 
         result: Dict[str, Any] = {
             "page_summary": "",
-            "interactable_elements": [],
             "screenshot_path": None,
         }
 
@@ -189,8 +184,6 @@ INTERACTABLE ELEMENTS:
 etc."""
 
         async with self.agent.iter(snapshot_prompt, usage=usage) as agent_run:
-            full_response = []
-
             log_markdown("### capture_page_snapshot")
             async for node in agent_run:
                 print_node(node, 4)
@@ -200,33 +193,7 @@ etc."""
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
-                log_markdown("#### capture_page_snapshot node")
-                # Collect text responses
-                if isinstance(node, CallToolsNode):
-                    for part in node.model_response.parts:
-                        if isinstance(part, TextPart):
-                            full_response.append(part.content)
-
-            # Process the response to extract summary and elements
-            full_text = "\n".join(full_response)
-
-            # Extract summary
-            if "SUMMARY:" in full_text:
-                summary_start = full_text.find("SUMMARY:") + len("SUMMARY:")
-                summary_end = full_text.find("\n", summary_start)
-                if summary_end == -1:
-                    summary_end = full_text.find("INTERACTABLE", summary_start)
-                if summary_end != -1:
-                    result["page_summary"] = full_text[summary_start:summary_end].strip()
-
-            # Extract interactable elements
-            if "INTERACTABLE ELEMENTS:" in full_text:
-                elements_start = full_text.find("INTERACTABLE ELEMENTS:") + len(
-                    "INTERACTABLE ELEMENTS:"
-                )
-                elements_text = full_text[elements_start:].strip()
-
-                # Split by lines and filter element entries
-                result["interactable_elements"] = elements_text.split("\n")
-
+            if not agent_run.result:
+                raise ValueError("No result from agent run")
+            result["page_summary"] = agent_run.result.output
         return result
