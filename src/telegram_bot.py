@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import logging
 import re
 from datetime import datetime
 from telegram import Update
@@ -12,6 +11,11 @@ from telegram.ext import (
     ContextTypes,
 )
 from .pydantic_mcp import ConversationAgent, TEMP_FOLDER
+from .log_config import setup_logging
+
+
+# Set up module logger
+logger = setup_logging(__name__)
 
 
 def escape_markdown_v2(text: str) -> str:
@@ -34,10 +38,7 @@ class TelegramBot:
     """A simple Telegram bot that echoes messages and responds to commands."""
 
     def __init__(self):
-        """Initialize the bot with configuration and logging."""
-
-        # Set up logging
-        self._setup_logging()
+        """Initialize the bot with configuration."""
 
         # Get bot token
         self.token = os.getenv("TELEGRAM_TOKEN")
@@ -55,14 +56,6 @@ class TelegramBot:
         # Set up startup/shutdown handlers
         self.application.post_init = self.startup
         self.application.post_shutdown = self.shutdown
-
-    def _setup_logging(self) -> None:
-        """Configure logging for the bot."""
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            level=logging.INFO,
-        )
-        self.logger = logging.getLogger(__name__)
 
     def _setup_handlers(self) -> None:
         """Register all command and message handlers."""
@@ -134,14 +127,14 @@ class TelegramBot:
         if update.message and update.message.text:
             async for chunk in self.agent.run_query(update.message.text):
                 if chunk["type"] == "text":
-                    logging.info(f"Received chunk: {chunk['text']}")
+                    logger.info(f"Received chunk: {chunk['text']}")
                     escaped_text = escape_markdown_v2(chunk["text"])
                     await update.message.reply_text(escaped_text, parse_mode="MarkdownV2")
                 elif chunk["type"] == "image":
                     if os.path.exists(chunk["filename"]):
                         await update.message.reply_photo(photo=chunk["filename"])
                     else:
-                        self.logger.warning(f"Image file not found: {chunk['filename']}")
+                        logger.warning(f"Image file not found: {chunk['filename']}")
                         await update.message.reply_text(
                             f"⚠️ Image was generated but file not found: {chunk['filename']}"
                         )
@@ -180,34 +173,34 @@ class TelegramBot:
                         if os.path.exists(chunk["filename"]):
                             await update.message.reply_photo(photo=chunk["filename"])
                         else:
-                            self.logger.warning(f"Image file not found: {chunk['filename']}")
+                            logger.warning(f"Image file not found: {chunk['filename']}")
                             await update.message.reply_text(
                                 f"⚠️ Image was generated but file not found: {chunk['filename']}"
                             )
 
             except Exception as e:
-                self.logger.error(f"Error handling PDF: {e}")
+                logger.error(f"Error handling PDF: {e}")
                 await update.message.reply_text(
                     "❌ Sorry, there was an error processing your PDF file. Please try again."
                 )
 
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Log errors caused by updates."""
-        self.logger.error("Exception while handling an update:", exc_info=context.error)
+        logger.error("Exception while handling an update:", exc_info=context.error)
 
     async def startup(self, application: Application) -> None:
         """Initialize the agent and start MCP servers on startup."""
         await self.agent.__aenter__()
-        self.logger.info("MCP servers started successfully")
+        logger.info("MCP servers started successfully")
 
     async def shutdown(self, application: Application) -> None:
         """Cleanup agent and stop MCP servers on shutdown."""
         await self.agent.__aexit__(None, None, None)
-        self.logger.info("MCP servers stopped")
+        logger.info("MCP servers stopped")
 
     def run(self) -> None:
         """Start the bot and run until interrupted."""
-        self.logger.info("Bot is starting...")
+        logger.info("Bot is starting...")
         self.application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 

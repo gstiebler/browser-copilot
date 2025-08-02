@@ -1,5 +1,6 @@
 """Utilities for processing Pydantic AI nodes and displaying their content."""
 
+import json
 import black
 from pydantic_ai import CallToolsNode, ModelRequestNode
 from pydantic_ai.messages import (
@@ -24,7 +25,12 @@ def print_node(node):
                     console.log(Markdown("### Tool Return Part"))
                     console.log(Markdown(f"Tool call: {part.tool_name}"))
 
-                    console.log(Markdown(part.content))
+                    # Check if content is a dict and format it as JSON
+                    if isinstance(part.content, dict):
+                        formatted_json = json.dumps(part.content, indent=2)
+                        console.log(Markdown(f"```json\n{formatted_json}\n```"))
+                    else:
+                        console.log(Markdown(str(part.content)))
                 elif isinstance(part, UserPromptPart):
                     console.log(Markdown("### User Prompt Part"))
                     console.log(Markdown(part.content))  # type: ignore

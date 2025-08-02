@@ -14,12 +14,16 @@ uv sync
 
 # Run the Telegram bot (main entry point)
 uv run python src/telegram_bot.py
-
-# Test the browser agent standalone
-uv run python src/browser_agent.py
+# Or use mise task runner
+mise run telegram_bot
 
 # Test the pydantic MCP agent
 uv run python src/pydantic_mcp.py
+# Or use mise task runner
+mise run pydantic_mcp
+
+# Test the browser agent standalone
+uv run python src/browser_agent.py
 
 # Run linting
 uv run ruff check .
@@ -30,6 +34,9 @@ uv run mypy .
 
 # Run tests
 uv run pytest
+
+# Run pre-commit hooks
+pre-commit run --all-files
 ```
 
 ## Architecture
@@ -70,14 +77,24 @@ The system uses multiple MCP servers:
 
 Required environment variables (.env):
 - `TELEGRAM_TOKEN`: Telegram bot authentication token
+- `ANTHROPIC_API_KEY`: Anthropic API key for Claude models (optional)
 - `OPENROUTER_API_KEY`: API key for OpenRouter (optional)
-- `OPENROUTER_MODEL`: Model name to use (e.g., "openai/gpt-4")
-- `GEMINI_API_KEY`: Google Gemini API key (used if OpenRouter not configured)
-- `GEMINI_MODEL`: Gemini model name (default: "gemini-2.5-flash")
+- `GEMINI_API_KEY`: Google Gemini API key (optional)
 - `LOGFIRE_TOKEN`: Token for Logfire monitoring and instrumentation
 - `TEMPDIR`: Temporary directory path (default: "/tmp")
 - `FILE_LOG_LEVEL`: File logging level (default: "DEBUG")
 - `CONSOLE_LOG_LEVEL`: Console logging level (default: "INFO")
+- `WAIT_FOR_INPUT`: If "true", pauses execution at certain points for debugging (default: "false")
+
+Model Configuration (choose one provider):
+- `MAIN_MODEL`: Main orchestrator model (e.g., "openrouter/your_model_name")
+- `BROWSER_MODEL`: Model specifically for browser automation tasks
+- `MEMORY_MODEL`: Model for memory-related operations
+
+The system supports multiple AI providers:
+- **Anthropic**: Direct Claude API access via ANTHROPIC_API_KEY
+- **OpenRouter**: Access to various models via OPENROUTER_API_KEY
+- **Google Gemini**: Via GEMINI_API_KEY
 
 ### Key Features
 
@@ -97,3 +114,94 @@ Required environment variables (.env):
 4. For browser tasks, delegates to BrowserAgent via browser_interact tool
 5. Results (text/images) are streamed back to user
 6. Conversation history is maintained for context
+
+### Development Tools
+
+- **Task Runner**: Uses `mise` for task management (see mise.toml)
+  - `mise run telegram_bot` - Run the Telegram bot
+  - `mise run pydantic_mcp` - Run the MCP agent standalone
+  
+- **Package Manager**: Uses `uv` for Python dependency management
+  - Fast, Rust-based package installer
+  - Manages virtual environments automatically
+  - Lock file ensures reproducible builds
+
+- **Code Quality**:
+  - `ruff`: Fast Python linter and formatter
+  - `mypy`: Static type checking
+  - `pre-commit`: Git hooks for code quality checks
+
+### Debugging Features
+
+- **WAIT_FOR_INPUT**: Set to "true" to pause execution at key points
+  - Useful for debugging agent decisions
+  - Allows inspection of intermediate states
+  - Controlled via `src/input_utils.py`
+
+- **Logging Levels**:
+  - FILE_LOG_LEVEL: Controls file logging verbosity
+  - CONSOLE_LOG_LEVEL: Controls console output (uses Rich for formatting)
+  - Logfire integration for production monitoring
+
+- **Model Configuration**:
+  - Supports separate models for different tasks (main, browser, memory)
+  - Configurable thinking budget for Claude models
+  - Multiple provider support for failover/testing
+
+### Utility Modules
+
+- **src/node_utils.py**: Helper for printing MCP response nodes
+- **src/model_config.py**: Centralized model configuration and provider selection
+- **src/log_config.py**: Logging setup with Rich console formatting
+- **src/input_utils.py**: Debug utilities for pausing execution
+
+### Project Setup
+
+1. **Prerequisites**:
+   - Python 3.11+ (see .python-version)
+   - uv package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+   - mise (optional, for task running)
+
+2. **Initial Setup**:
+   ```bash
+   # Clone the repository
+   git clone <repository-url>
+   cd browser-copilot
+   
+   # Install dependencies
+   uv sync
+   
+   # Copy environment variables
+   cp .env.example .env
+   # Edit .env with your API keys and configuration
+   
+   # Install pre-commit hooks (optional)
+   pre-commit install
+   ```
+
+3. **Telegram Bot Setup**:
+   - Create a bot via [@BotFather](https://t.me/botfather)
+   - Get your bot token and add to TELEGRAM_TOKEN in .env
+   - Start the bot with `uv run python src/telegram_bot.py`
+
+### Common Issues and Solutions
+
+- **MCP Server Errors**: If browser automation fails, the Playwright MCP server may need installation:
+  ```bash
+  npx @playwright/mcp@latest install
+  ```
+
+- **Model Provider Issues**: 
+  - Ensure at least one API key is configured (Anthropic, OpenRouter, or Gemini)
+  - Check model names match available models for your provider
+  - Verify API key permissions and quotas
+
+- **Memory/PDF Server Issues**: These are optional; the bot will work without them but with reduced functionality
+
+### Contributing
+
+When making changes:
+1. Follow existing code patterns and conventions
+2. Run linting and type checking before committing
+3. Update this CLAUDE.md file if adding new features or changing architecture
+4. Test both Telegram bot and standalone agent modes

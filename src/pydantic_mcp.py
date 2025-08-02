@@ -3,15 +3,16 @@ import os
 from typing import List, AsyncGenerator, Any, Optional
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
-from pydantic_ai.messages import (
-    ModelMessage,
-)
+from pydantic_ai.messages import ModelMessage
 import logfire
+
+from src.input_utils import wait_for_input
 from .log_config import setup_logging, console
 import black
 from .browser_agent import BrowserAgent
 from .model_config import get_model
 from rich.markdown import Markdown
+from .node_utils import print_node
 
 
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
@@ -214,15 +215,17 @@ class ConversationAgent:
         """
         # Run the query with existing message history
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
-            nodes_so_far = []
             console.log(Markdown("## pydantic mcp"))
             async for node in agent_run:
-                nodes_so_far.append(node)
-
                 console.log(Markdown("### pydantic mcp node"))
-                console.print(
+                logger.debug(
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
+
+                print_node(node)
+
+                # Pause and wait for user confirmation
+                wait_for_input()
 
                 # Check if we have a pending screenshot from browser agent
                 if self._pending_screenshot:
@@ -256,9 +259,6 @@ async def main():
         console.log(Markdown("## Example 2: Taking a screenshot"))
         async for chunk in agent.run_query("Open the Canada Life website"):
             console.log(chunk)
-
-        console.log(Markdown("## Conversation History"))
-        console.log(black.format_str(repr(agent.get_messages()), mode=black.Mode()))
 
 
 if __name__ == "__main__":

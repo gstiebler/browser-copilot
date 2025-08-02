@@ -9,8 +9,11 @@ from pydantic_ai.messages import (
     TextPart,
     ToolReturnPart,
 )
+
+from .input_utils import wait_for_input
 from .log_config import setup_logging, console
 from rich.markdown import Markdown
+from .node_utils import print_node
 
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
@@ -113,7 +116,11 @@ class BrowserAgent:
             console.log(Markdown("## execute_browser_task"))
             async for node in agent_run:
                 console.log(Markdown("### execute_browser_task node"))
-                console.print(
+                print_node(node)
+
+                # Pause and wait for user confirmation
+                wait_for_input()
+                logger.debug(
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
@@ -213,6 +220,12 @@ etc."""
 
             console.log(Markdown("## capture_page_snapshot"))
             async for node in agent_run:
+                print_node(node)  # type: ignore
+
+                wait_for_input()
+                logger.debug(
+                    f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
+                )
                 nodes_collected.append(node)
 
                 console.log(Markdown("### capture_page_snapshot node"))
