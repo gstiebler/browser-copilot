@@ -16,26 +16,40 @@ logger = setup_logging(__name__)
 
 system_prompt = """You are a web page analysis expert that specializes in capturing and analyzing web page content.
 Your primary focus is on:
-- Taking comprehensive screenshots of web pages
 - Analyzing page structure and layout
-- Identifying all interactable elements (buttons, links, forms, inputs, dropdowns, etc.)
+- Identifying interactable elements relevant to the current goal
 - Providing detailed summaries of page content
 - Extracting element references for future interactions
 
 When analyzing pages, you should:
-1. First capture a screenshot to document the visual state
-2. Use the browser_snapshot tool to get the accessibility tree
-3. Analyze the snapshot to identify ALL interactable elements
-4. Provide a clear, structured summary of what the page contains
+1. Use the browser_snapshot tool to get the accessibility tree
+2. Analyze the snapshot to identify interactable elements RELEVANT TO THE CURRENT GOAL
+3. Provide a clear, structured summary of what the page contains
 
-For each interactable element you find, include:
+IMPORTANT: You will be provided with a summary of the current goal. You should:
+- Focus on elements that are relevant to achieving this goal
+- Prioritize elements that would help accomplish the task at hand
+- You may omit elements that are clearly unrelated to the goal (e.g., footer links when filling a form)
+- However, include navigation elements if they might be needed to reach the goal
+
+For each relevant interactable element you find, include:
 - Element type (button, link, input, select, textarea, etc.)
 - Element text or label
-- Element reference ID (for future interactions)
 - Any relevant attributes (placeholder text, current value, disabled state, etc.)
 
-Your analysis should be thorough and systematic, ensuring no important elements are missed.
-Format your responses clearly with proper sections for the summary and element listings."""
+If there are relevant hierarchical relationships between elements (e.g., form fields grouped under a form, dropdown options under a select, buttons in a toolbar), include this hierarchy information to help the caller understand the structure.
+
+DO NOT include element reference IDs in your output.
+
+Your analysis should be focused and goal-oriented, ensuring important elements for the task are not missed.
+
+Format your responses as:
+SUMMARY: [brief page description]
+
+RELEVANT INTERACTABLE ELEMENTS:
+- [element details]
+- [element details]
+etc."""
 
 
 class PageAnalysisAgent:
@@ -60,13 +74,20 @@ class PageAnalysisAgent:
             name="PageAnalysisAgent",
         )
 
-    async def capture_page_snapshot(self, usage: Any = None) -> Dict[str, Any]:
+    async def capture_page_snapshot(
+        self, goal_summary: str = "", usage: Any = None
+    ) -> Dict[str, Any]:
         """
-        Capture a snapshot of the current web page and analyze it to extract interactable elements.
+        Capture a snapshot of the current web page and analyze it to extract interactable elements
+        relevant to the current goal.
+
+        Args:
+            goal_summary: Summary of the current goal/task being performed
+            usage: Usage tracking object
 
         Returns:
             Dictionary containing:
-            - page_summary: Brief description of the page, and a list of all clickable/fillable elements with their details
+            - page_summary: Brief description of the page, and a list of goal-relevant clickable/fillable elements
             - screenshot_path: Path to the screenshot if taken
         """
         result: Dict[str, Any] = {
@@ -96,26 +117,14 @@ class PageAnalysisAgent:
         except Exception as e:
             logger.warning(f"Failed to capture screenshot directly: {e}")
 
+        # Build the prompt with goal context
+        goal_context = f"\n\nCURRENT GOAL: {goal_summary}" if goal_summary else ""
+
         # Now get the accessibility snapshot and analyze it
-        snapshot_prompt = """Please:
+        snapshot_prompt = f"""Please:{goal_context}
+
 1. Use browser_snapshot to get the accessibility tree
-2. Analyze the snapshot and provide:
-   - A brief summary of what the page contains
-   - A comprehensive list of ALL interactable elements (buttons, links, inputs, dropdowns, etc.)
-   
-For each interactable element, include:
-- Element type (button, link, input, select, etc.)
-- Text/label of the element
-- Element reference ID (for interaction)
-- Any additional relevant attributes (placeholder text, current value, etc.)
-
-Format the response as:
-SUMMARY: [brief page description]
-
-INTERACTABLE ELEMENTS:
-- [element details]
-- [element details]
-etc."""
+2. Analyze the snapshot and provide a summary of the page and list of goal-relevant interactable elements."""
 
         async with self.agent.iter(snapshot_prompt, usage=usage) as agent_run:
             log_markdown("### PageAnalysisAgent - capture_page_snapshot")
