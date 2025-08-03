@@ -4,6 +4,7 @@ import json
 import black
 from pydantic_ai import CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.messages import (
+    RetryPromptPart,
     TextPart,
     ToolReturnPart,
     ThinkingPart,
@@ -37,6 +38,13 @@ def print_node(node, indent: int) -> None:
                 elif isinstance(part, SystemPromptPart):
                     log_markdown(f"{indent_str} System Prompt Part")
                     log_markdown(part.content)
+                elif isinstance(part, RetryPromptPart):
+                    log_markdown(f"{indent_str} Retry Prompt Part")
+                    if isinstance(part.content, str):
+                        log_markdown(part.content)
+                    else:
+                        for error_detail in part.content:
+                            log_markdown(f"{indent_str} Error Detail: {error_detail}")
                 else:
                     raise ValueError(f"Unknown part type: {type(part)} in ModelRequestNode")
         elif isinstance(node, CallToolsNode):
