@@ -9,7 +9,8 @@ import logfire
 from src.input_utils import wait_for_input
 from .log_config import setup_logging, console, log_markdown
 import black
-from .browser_agent import BrowserAgent
+from .browser_interaction_agent import BrowserInteractionAgent
+from .page_analysis_agent import PageAnalysisAgent
 from .model_config import get_model
 from .node_utils import print_node
 
@@ -104,8 +105,9 @@ class ConversationAgent:
         self.message_history: List[ModelMessage] = []
         self.mcp_context: Optional[Any] = None
 
-        # Initialize browser agent
-        self.browser_agent: Optional[BrowserAgent] = None
+        # Initialize browser agents
+        self.browser_interaction_agent: Optional[BrowserInteractionAgent] = None
+        self.page_analysis_agent: Optional[PageAnalysisAgent] = None
         self._pending_screenshot: Optional[str] = None
 
         # Create browser interaction tool
@@ -126,11 +128,13 @@ class ConversationAgent:
             Returns:
                 Result of the browser interaction
             """
-            if not self.browser_agent:
-                return "Browser agent not initialized. Please try again."
+            if not self.browser_interaction_agent:
+                return "Browser interaction agent not initialized. Please try again."
 
             results = []
-            async for chunk in self.browser_agent.execute_browser_task(task, usage=ctx.usage):
+            async for chunk in self.browser_interaction_agent.execute_browser_task(
+                task, usage=ctx.usage
+            ):
                 if chunk["type"] == "text":
                     results.append(chunk["text"])
                 elif chunk["type"] == "image":
@@ -155,10 +159,10 @@ class ConversationAgent:
             Returns:
                 A formatted summary and list of interactable elements
             """
-            if not self.browser_agent:
-                return "Browser agent not initialized. Please navigate to a webpage first."
+            if not self.page_analysis_agent:
+                return "Page analysis agent not initialized. Please navigate to a webpage first."
 
-            snapshot = await self.browser_agent.capture_page_snapshot(usage=ctx.usage)
+            snapshot = await self.page_analysis_agent.capture_page_snapshot(usage=ctx.usage)
 
             if snapshot.get("screenshot_path"):
                 # Store screenshot path for the main agent to process
@@ -187,18 +191,60 @@ class ConversationAgent:
         self.mcp_context = self.agent.run_mcp_servers()
         await self.mcp_context.__aenter__()
 
-        # Initialize browser agent
+        # Initialize browser agents
         browser_model = get_model(BROWSER_MODEL_NAME)
-        self.browser_agent = BrowserAgent(browser_model)
-        await self.browser_agent.__aenter__()
+
+        # Initialize Playwright MCP server
+        from pydantic_ai.mcp import MCPServerStdio
+        import os
+
+        TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
+
+        playwright_server = MCPServerStdio(
+            "npx",
+            args=[
+                "@playwright/mcp@latest",
+                "--output-dir",
+                TEMP_FOLDER,
+                "--image-responses",
+                "omit",
+            ],
+        )
+
+        memory_server = MCPServerStdio(
+            "uvx",
+            args=[
+                "--from",
+                "git+https://github.com/gstiebler/h-memory-mcp-server.git",
+                "h-memory-mcp-server",
+                "--memory-file",
+                "memory.json",
+            ],
+        )
+
+        # Browser interaction agent gets both Playwright and Memory servers
+        interaction_mcp_servers = [playwright_server, memory_server]
+        self.browser_interaction_agent = BrowserInteractionAgent(
+            browser_model, interaction_mcp_servers
+        )
+
+        # Page analysis agent only gets Playwright server
+        analysis_mcp_servers = [playwright_server]
+        self.page_analysis_agent = PageAnalysisAgent(
+            browser_model, analysis_mcp_servers, playwright_server
+        )
+
+        # Start MCP servers for interaction agent (which will start both Playwright and Memory)
+        self.browser_interaction_context = self.browser_interaction_agent.agent.run_mcp_servers()
+        await self.browser_interaction_context.__aenter__()
 
         self._pending_screenshot = None
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit async context manager for MCP servers."""
-        if self.browser_agent:
-            await self.browser_agent.__aexit__(exc_type, exc_val, exc_tb)
+        if hasattr(self, "browser_interaction_context") and self.browser_interaction_context:
+            await self.browser_interaction_context.__aexit__(exc_type, exc_val, exc_tb)
         if self.mcp_context:
             await self.mcp_context.__aexit__(exc_type, exc_val, exc_tb)
 
