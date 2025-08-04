@@ -55,7 +55,19 @@ complete each step before moving to the next. Provide clear feedback about what 
 
 IMPORTANT: When you have completed a step or have results to share with the user, you MUST use the send_telegram_message tool.
 If you take a screenshot, use the send_telegram_image tool to send it.
-Do not include the results in your output - instead, send them via the telegram tools.
+
+Your response should have TWO distinct sections:
+
+1. ACTION SUMMARY: A brief description of what you did and the result
+
+2. BROWSER STATE: A natural language description of the current page, including:
+   - What page you're currently on
+   - Key elements visible on the page
+   - Important information displayed
+   - Available actions or interactive elements
+   - Any forms, buttons, or links that might be relevant
+
+Separate these sections clearly in your response.
 """
 
 
@@ -84,7 +96,7 @@ class BrowserInteractionAgent(BaseAgent):
         # Set up telegram tools from base class
         self._setup_telegram_tools()
 
-    async def execute_goal_step(self, goal: str, usage: Any = None) -> None:
+    async def execute_goal_step(self, goal: str, usage: Any = None) -> str:
         """
         Execute a single step towards completing a goal using the browser.
 
@@ -95,6 +107,9 @@ class BrowserInteractionAgent(BaseAgent):
         Args:
             goal: The overall goal to be achieved
             usage: Usage tracking from parent agent
+
+        Returns:
+            String containing the agent's output with action summary and browser state
         """
         step_prompt = f"""Goal: {goal}
 
@@ -102,7 +117,7 @@ Execute the next appropriate step towards completing this goal."""
 
         if not self.agent:
             logger.error("Agent not initialized")
-            return
+            return "Failed to execute browser task: Agent not initialized"
 
         async with self.agent.iter(step_prompt, usage=usage) as agent_run:
             log_markdown("## BrowserInteractionAgent - execute_goal_step")
@@ -121,8 +136,11 @@ Execute the next appropriate step towards completing this goal."""
             # The agent should have already sent messages via the telegram tools
             if agent_run.result and agent_run.result.output:
                 logger.debug(f"Agent output: {agent_run.result.output}")
+                return agent_run.result.output
+            else:
+                return "No result from browser interaction"
 
-    async def execute_browser_task(self, task: str, usage: Any = None) -> None:
+    async def execute_browser_task(self, task: str, usage: Any = None) -> str:
         """
         Execute a browser automation task and send results via telegram.
 
@@ -131,6 +149,9 @@ Execute the next appropriate step towards completing this goal."""
         Args:
             task: The browser task to execute
             usage: Usage tracking from parent agent
+
+        Returns:
+            String containing the agent's output
         """
         # Delegate to the new method for consistency
-        await self.execute_goal_step(task, usage)
+        return await self.execute_goal_step(task, usage)

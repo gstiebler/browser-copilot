@@ -124,8 +124,12 @@ class ConversationAgent(BaseAgent):
                 return "Browser interaction agent not initialized. Please try again."
 
             # Execute browser task - it will send messages directly
-            await self.browser_interaction_agent.execute_browser_task(task, usage=ctx.usage)
-            return "Browser task completed."
+            result = await self.browser_interaction_agent.execute_browser_task(
+                task, usage=ctx.usage
+            )
+
+            # Return the result directly
+            return result
 
         # Create page snapshot tool
         @self.agent.tool
