@@ -121,7 +121,7 @@ class PageAnalysisAgent:
         goal_context = f"\n\nCURRENT GOAL: {goal_summary}" if goal_summary else ""
 
         # Now get the accessibility snapshot and analyze it
-        snapshot_prompt = f"""Please:{goal_context}
+        snapshot_prompt = f"""Please: {goal_context}
 
 1. Use browser_snapshot to get the accessibility tree
 2. Analyze the snapshot and provide a summary of the page and list of goal-relevant interactable elements."""

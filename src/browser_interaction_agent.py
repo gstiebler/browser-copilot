@@ -32,6 +32,22 @@ Important notes for clicking elements:
   }
   ```
 
+IMPORTANT: When given a goal, you must execute ONE STEP at a time:
+1. Determine what the logical first/next step should be
+2. Execute only that single step
+3. Clearly indicate when the step is completed
+4. Return a concise summary of what was accomplished in this step
+
+For example, if the goal is "determine who was the FIFA World Champion in 1958":
+- First step might be: Search Google for "FIFA official website"
+- After finding it's www.fifa.com, return: "Found the FIFA website: www.fifa.com"
+- Do NOT continue to the next step (visiting the website)
+
+Always be clear about:
+- What step you're executing
+- What the result of that step is
+- That you've completed this single step
+
 Always be precise and methodical in your browser interactions. When performing multi-step tasks,
 complete each step before moving to the next. Provide clear feedback about what actions you're taking."""
 
@@ -56,21 +72,29 @@ class BrowserInteractionAgent:
             name="BrowserInteractionAgent",
         )
 
-    async def execute_browser_task(
-        self, task: str, usage: Any = None
-    ) -> AsyncGenerator[dict, None]:
+    async def execute_goal_step(self, goal: str, usage: Any = None) -> AsyncGenerator[dict, None]:
         """
-        Execute a browser automation task and yield results.
+        Execute a single step towards completing a goal using the browser.
+
+        This method determines what constitutes the first step of the goal
+        and executes it. The agent will decide when the step is completed
+        and return the result.
 
         Args:
-            task: The browser task to execute
+            goal: The overall goal to be achieved
             usage: Usage tracking from parent agent
 
         Yields:
-            Dictionaries containing response chunks
+            Dictionaries containing response chunks with step results
         """
-        async with self.agent.iter(task, usage=usage) as agent_run:
-            log_markdown("## BrowserInteractionAgent - execute_browser_task")
+        step_prompt = f"""Goal: {goal}
+
+Execute the next appropriate step towards completing this goal."""
+
+        async with self.agent.iter(step_prompt, usage=usage) as agent_run:
+            log_markdown("## BrowserInteractionAgent - execute_goal_step")
+            log_markdown(f"### Goal: {goal}")
+
             async for node in agent_run:
                 log_markdown("### Browser interaction node")
                 print_node(node, 4)
@@ -81,7 +105,30 @@ class BrowserInteractionAgent:
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
+            result = agent_run.result.output if agent_run.result else "No result"
+
             yield {
                 "type": "text",
-                "text": agent_run.result.output,  # type: ignore
+                "text": result,
+                "step_completed": True,
             }
+
+    async def execute_browser_task(
+        self, task: str, usage: Any = None
+    ) -> AsyncGenerator[dict, None]:
+        """
+        Execute a browser automation task and yield results.
+
+        This method is kept for backward compatibility but delegates
+        to execute_goal_step for consistency.
+
+        Args:
+            task: The browser task to execute
+            usage: Usage tracking from parent agent
+
+        Yields:
+            Dictionaries containing response chunks
+        """
+        # Delegate to the new method for consistency
+        async for chunk in self.execute_goal_step(task, usage):
+            yield chunk
