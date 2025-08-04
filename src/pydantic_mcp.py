@@ -1,18 +1,19 @@
-import asyncio
 import os
-from typing import List, AsyncGenerator, Any, Optional
+from typing import List, Any, Optional
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
 import logfire
 
 from src.input_utils import wait_for_input
-from .log_config import setup_logging, console, log_markdown
+from .log_config import setup_logging, log_markdown
 import black
 from .browser_interaction_agent import BrowserInteractionAgent
 from .page_analysis_agent import PageAnalysisAgent
 from .model_config import get_model
 from .node_utils import print_node
+from .base_agent import BaseAgent
+from .telegram_message_sender import TelegramMessageSender
 
 
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")
@@ -41,15 +42,18 @@ Examples of useful information to store include:
 - Processes that have a chance to be repeated in the future
 
 ALWAYS start by listing the memories in the root of the memory server.
+
+IMPORTANT: When you have a response for the user, you MUST use the send_telegram_message tool to send it.
+Do not include the response in your output - instead, send it via the telegram tool.
 """
 
 
-class ConversationAgent:
+class ConversationAgent(BaseAgent):
     """A conversational agent that maintains message history across interactions."""
 
-    def __init__(self, node_processor: Any = None) -> None:
+    def __init__(self, message_sender: TelegramMessageSender) -> None:
         """Initialize the agent with model and MCP server configuration."""
-        self.node_processor = node_processor
+        super().__init__(message_sender)
         mcp_servers = [
             MCPServerStdio("uvx", args=["mcp-server-calculator"]),
             MCPServerStdio(
@@ -87,6 +91,9 @@ class ConversationAgent:
             name="ConversationAgent",
         )
 
+        # Set up telegram tools from base class
+        self._setup_telegram_tools()
+
         # Store conversation history
         self.message_history: List[ModelMessage] = []
         self.mcp_context: Optional[Any] = None
@@ -94,7 +101,6 @@ class ConversationAgent:
         # Initialize browser agents
         self.browser_interaction_agent: Optional[BrowserInteractionAgent] = None
         self.page_analysis_agent: Optional[PageAnalysisAgent] = None
-        self._pending_screenshot: Optional[str] = None
 
         # Create browser interaction tool
         @self.agent.tool
@@ -117,18 +123,9 @@ class ConversationAgent:
             if not self.browser_interaction_agent:
                 return "Browser interaction agent not initialized. Please try again."
 
-            results = []
-            async for chunk in self.browser_interaction_agent.execute_browser_task(
-                task, usage=ctx.usage
-            ):
-                if chunk["type"] == "text":
-                    results.append(chunk["text"])
-                elif chunk["type"] == "image":
-                    # Store the image path for the main agent to process
-                    self._pending_screenshot = chunk["filename"]
-                    results.append(f"Screenshot saved to: {chunk['filename']}")
-
-            return "\n".join(results) if results else "Browser task completed."
+            # Execute browser task - it will send messages directly
+            await self.browser_interaction_agent.execute_browser_task(task, usage=ctx.usage)
+            return "Browser task completed."
 
         # Create page snapshot tool
         @self.agent.tool
@@ -150,9 +147,8 @@ class ConversationAgent:
 
             snapshot = await self.page_analysis_agent.capture_page_snapshot(usage=ctx.usage)
 
-            if snapshot.get("screenshot_path"):
-                # Store screenshot path for the main agent to process
-                self._pending_screenshot = snapshot["screenshot_path"]
+            # Note: The agent will send the screenshot via the telegram tool if needed
+            # We'll include the path in the response for the agent to handle
 
             # Format the response
             response_parts = []
@@ -174,6 +170,8 @@ class ConversationAgent:
 
     async def __aenter__(self) -> "ConversationAgent":
         """Enter async context manager for MCP servers."""
+        if not self.agent:
+            raise ValueError("Agent not initialized")
         self.mcp_context = self.agent.run_mcp_servers()
         await self.mcp_context.__aenter__()
 
@@ -211,20 +209,22 @@ class ConversationAgent:
         # Browser interaction agent gets both Playwright and Memory servers
         interaction_mcp_servers = [playwright_server, memory_server]
         self.browser_interaction_agent = BrowserInteractionAgent(
-            browser_model, interaction_mcp_servers
+            self.message_sender, browser_model, interaction_mcp_servers
         )
 
         # Page analysis agent only gets Playwright server
         analysis_mcp_servers = [playwright_server]
         self.page_analysis_agent = PageAnalysisAgent(
-            browser_model, analysis_mcp_servers, playwright_server
+            self.message_sender, browser_model, analysis_mcp_servers, playwright_server
         )
 
         # Start MCP servers for interaction agent (which will start both Playwright and Memory)
-        self.browser_interaction_context = self.browser_interaction_agent.agent.run_mcp_servers()
-        await self.browser_interaction_context.__aenter__()
+        if self.browser_interaction_agent and self.browser_interaction_agent.agent:
+            self.browser_interaction_context = (
+                self.browser_interaction_agent.agent.run_mcp_servers()
+            )
+            await self.browser_interaction_context.__aenter__()
 
-        self._pending_screenshot = None
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -234,17 +234,18 @@ class ConversationAgent:
         if self.mcp_context:
             await self.mcp_context.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def run_query(self, query: str) -> AsyncGenerator[dict, None]:
+    async def run_query(self, query: str) -> None:
         """
-        Run a query and store the messages in history, yielding intermediate results.
+        Run a query and store the messages in history.
 
         Args:
             query: The user's query
-
-        Yields:
-            Intermediate messages and final response
         """
         # Run the query with existing message history
+        if not self.agent:
+            logger.error("Agent not initialized")
+            return
+
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
             log_markdown("# pydantic mcp")
             async for node in agent_run:
@@ -258,39 +259,15 @@ class ConversationAgent:
                 # Pause and wait for user confirmation
                 wait_for_input()
 
-                # Check if we have a pending screenshot from browser agent
-                if self._pending_screenshot:
-                    yield {
-                        "type": "image",
-                        "node_type": "BrowserScreenshot",
-                        "filename": self._pending_screenshot,
-                    }
-                    self._pending_screenshot = None
-
             if agent_run.result is not None:
                 # Store conversation history
                 self.message_history = agent_run.result.all_messages()
-                yield {
-                    "type": "text",
-                    "text": agent_run.result.output,  # type: ignore
-                }
+
+                # The agent should have already sent messages via the telegram tools
+                # Log the output for debugging
+                if agent_run.result.output:
+                    logger.debug(f"Agent output: {agent_run.result.output}")
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
         return self.message_history.copy()
-
-
-async def main():
-    """Simple usage example demonstrating the ConversationAgent."""
-    log_markdown("# Starting ConversationAgent example")
-
-    # Create a conversation agent
-    async with ConversationAgent() as agent:
-        async for chunk in agent.run_query(
-            "Open the Canada Life website (www.canadalife.com) and take a snapshot"
-        ):
-            console.log(chunk)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

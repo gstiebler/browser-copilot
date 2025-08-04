@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
-import re
 from datetime import datetime
+from typing import Dict
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -11,27 +11,12 @@ from telegram.ext import (
     ContextTypes,
 )
 from .pydantic_mcp import ConversationAgent, TEMP_FOLDER
+from .telegram_message_sender import TelegramMessageSender
 from .log_config import setup_logging
 
 
 # Set up module logger
 logger = setup_logging(__name__)
-
-
-def escape_markdown_v2(text: str) -> str:
-    """
-    Escape special characters for Telegram's MarkdownV2 parse mode.
-
-    According to Telegram docs, any character with code between 1 and 126
-    can be escaped with a preceding '\' character.
-    """
-    # Characters that need to be escaped in MarkdownV2
-    escape_chars = r"_*[]()~`>#+-=|{}.!"
-
-    # Escape each special character with a backslash
-    escaped_text = re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
-
-    return escaped_text
 
 
 class TelegramBot:
@@ -48,7 +33,8 @@ class TelegramBot:
         # Create application
         self.application = Application.builder().token(self.token).build()
 
-        self.agent = ConversationAgent()
+        # Dictionary to store agents by chat_id
+        self.agents: Dict[int, ConversationAgent] = {}
 
         # Set up handlers
         self._setup_handlers()
@@ -122,27 +108,44 @@ class TelegramBot:
                     "Please provide some text to echo!\nExample: /echo Hello World"
                 )
 
+    async def get_or_create_agent(self, chat_id: int) -> ConversationAgent:
+        """Get existing agent for chat_id or create a new one.
+
+        Args:
+            chat_id: The Telegram chat ID
+
+        Returns:
+            ConversationAgent instance for this chat
+        """
+        if chat_id not in self.agents:
+            # Create message sender for this chat
+            message_sender = TelegramMessageSender(self.application.bot, chat_id)
+
+            # Create new agent
+            agent = ConversationAgent(message_sender)
+            await agent.__aenter__()
+
+            self.agents[chat_id] = agent
+            logger.info(f"Created new agent for chat {chat_id}")
+
+        return self.agents[chat_id]
+
     async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Echo regular text messages."""
-        if update.message and update.message.text:
-            async for chunk in self.agent.run_query(update.message.text):
-                if chunk["type"] == "text":
-                    logger.info(f"Received chunk: {chunk['text']}")
-                    escaped_text = escape_markdown_v2(chunk["text"])
-                    await update.message.reply_text(escaped_text, parse_mode="MarkdownV2")
-                elif chunk["type"] == "image":
-                    if os.path.exists(chunk["filename"]):
-                        await update.message.reply_photo(photo=chunk["filename"])
-                    else:
-                        logger.warning(f"Image file not found: {chunk['filename']}")
-                        await update.message.reply_text(
-                            f"⚠️ Image was generated but file not found: {chunk['filename']}"
-                        )
+        """Handle regular text messages."""
+        if update.message and update.message.text and update.effective_chat:
+            chat_id = update.effective_chat.id
+
+            # Get or create agent for this chat
+            agent = await self.get_or_create_agent(chat_id)
+
+            # Process the query - agent will send messages directly
+            await agent.run_query(update.message.text)
 
     async def pdf_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle PDF documents sent by users."""
-        if update.message and update.message.document:
+        if update.message and update.message.document and update.effective_chat:
             try:
+                chat_id = update.effective_chat.id
                 document = update.message.document
                 file_name = document.file_name or f"document_{document.file_id}.pdf"
 
@@ -161,22 +164,14 @@ class TelegramBot:
                 file = await context.bot.get_file(document.file_id)
                 await file.download_to_drive(file_path)
 
+                # Get or create agent for this chat
+                agent = await self.get_or_create_agent(chat_id)
+
                 # Send message to agent about the PDF
                 message = f"A PDF file has been received and saved to: {file_path}"
 
-                # Process the response from the agent
-                async for chunk in self.agent.run_query(message):
-                    if chunk["type"] == "text":
-                        escaped_text = escape_markdown_v2(chunk["text"])
-                        await update.message.reply_text(escaped_text, parse_mode="MarkdownV2")
-                    elif chunk["type"] == "image":
-                        if os.path.exists(chunk["filename"]):
-                            await update.message.reply_photo(photo=chunk["filename"])
-                        else:
-                            logger.warning(f"Image file not found: {chunk['filename']}")
-                            await update.message.reply_text(
-                                f"⚠️ Image was generated but file not found: {chunk['filename']}"
-                            )
+                # Process - agent will send messages directly
+                await agent.run_query(message)
 
             except Exception as e:
                 logger.error(f"Error handling PDF: {e}")
@@ -189,14 +184,21 @@ class TelegramBot:
         logger.error("Exception while handling an update:", exc_info=context.error)
 
     async def startup(self, application: Application) -> None:
-        """Initialize the agent and start MCP servers on startup."""
-        await self.agent.__aenter__()
-        logger.info("MCP servers started successfully")
+        """Initialize on startup."""
+        logger.info("Bot started successfully")
 
     async def shutdown(self, application: Application) -> None:
-        """Cleanup agent and stop MCP servers on shutdown."""
-        await self.agent.__aexit__(None, None, None)
-        logger.info("MCP servers stopped")
+        """Cleanup agents and stop MCP servers on shutdown."""
+        # Cleanup all agents
+        for chat_id, agent in self.agents.items():
+            try:
+                await agent.__aexit__(None, None, None)
+                logger.info(f"Cleaned up agent for chat {chat_id}")
+            except Exception as e:
+                logger.error(f"Error cleaning up agent for chat {chat_id}: {e}")
+
+        self.agents.clear()
+        logger.info("All agents cleaned up")
 
     def run(self) -> None:
         """Start the bot and run until interrupted."""

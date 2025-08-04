@@ -49,18 +49,18 @@ def print_node(node, indent: int) -> None:
                     raise ValueError(f"Unknown part type: {type(part)} in ModelRequestNode")
         elif isinstance(node, CallToolsNode):
             # Handle tool calls
-            for part in node.model_response.parts:
-                if isinstance(part, ThinkingPart):
+            for tool_part in node.model_response.parts:
+                if isinstance(tool_part, ThinkingPart):
                     log_markdown(f"{indent_str} Thinking Part")
-                    log_markdown(part.content)
-                elif isinstance(part, ToolCallPart):
-                    log_markdown(f"{indent_str} Tool Call Part: `{part.tool_name}`")
-                    log_markdown(f"Arguments: \n```json\n{part.args}\n```")
-                elif isinstance(part, TextPart):
+                    log_markdown(tool_part.content)
+                elif isinstance(tool_part, ToolCallPart):
+                    log_markdown(f"{indent_str} Tool Call Part: `{tool_part.tool_name}`")
+                    log_markdown(f"Arguments: \n```json\n{tool_part.args}\n```")
+                elif isinstance(tool_part, TextPart):
                     log_markdown(f"{indent_str} Text Part")
-                    log_markdown(part.content)
+                    log_markdown(tool_part.content)
                 else:
-                    raise ValueError(f"Unknown part type: {type(part)} in CallToolsNode")
+                    raise ValueError(f"Unknown part type: {type(tool_part)} in CallToolsNode")
         elif isinstance(node, End):
             # End of the agent run
             log_markdown(f"{indent_str} End of Agent Run")

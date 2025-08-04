@@ -8,6 +8,8 @@ from pydantic_ai.mcp import MCPServerStdio
 from .input_utils import wait_for_input
 from .log_config import setup_logging, log_markdown
 from .node_utils import print_node
+from .base_agent import BaseAgent
+from .telegram_message_sender import TelegramMessageSender
 
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
@@ -49,20 +51,33 @@ SUMMARY: [brief page description]
 RELEVANT INTERACTABLE ELEMENTS:
 - [element details]
 - [element details]
-etc."""
+etc.
+
+IMPORTANT: If you capture a screenshot, use the send_telegram_image tool to send it to the user.
+Use the send_telegram_message tool to send your analysis to the user.
+Do not include the analysis in your output - instead, send it via the telegram tools.
+"""
 
 
-class PageAnalysisAgent:
+class PageAnalysisAgent(BaseAgent):
     """An agent specifically for web page analysis and screenshot capture."""
 
-    def __init__(self, model, mcp_servers, playwright_server: MCPServerStdio):
+    def __init__(
+        self,
+        message_sender: TelegramMessageSender,
+        model,
+        mcp_servers,
+        playwright_server: MCPServerStdio,
+    ):
         """Initialize the page analysis agent.
 
         Args:
+            message_sender: The TelegramMessageSender instance
             model: The AI model to use
             mcp_servers: List of MCP servers
             playwright_server: The Playwright MCP server instance for direct screenshot calls
         """
+        super().__init__(message_sender)
         self.model = model
         self.playwright_server = playwright_server
 
@@ -73,6 +88,9 @@ class PageAnalysisAgent:
             system_prompt=system_prompt,
             name="PageAnalysisAgent",
         )
+
+        # Set up telegram tools from base class
+        self._setup_telegram_tools()
 
     async def capture_page_snapshot(
         self, goal_summary: str = "", usage: Any = None
@@ -114,6 +132,9 @@ class PageAnalysisAgent:
             # Log the screenshot in markdown
             log_markdown(f"![Screenshot]({screenshot_filename})")
 
+            # Send the screenshot immediately
+            await self.message_sender.send_image(screenshot_path)
+
         except Exception as e:
             logger.warning(f"Failed to capture screenshot directly: {e}")
 
@@ -125,6 +146,10 @@ class PageAnalysisAgent:
 
 1. Use browser_snapshot to get the accessibility tree
 2. Analyze the snapshot and provide a summary of the page and list of goal-relevant interactable elements."""
+
+        if not self.agent:
+            logger.error("Agent not initialized")
+            raise ValueError("Agent not initialized")
 
         async with self.agent.iter(snapshot_prompt, usage=usage) as agent_run:
             log_markdown("### PageAnalysisAgent - capture_page_snapshot")

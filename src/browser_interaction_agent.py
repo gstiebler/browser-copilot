@@ -1,10 +1,12 @@
-from typing import Any, AsyncGenerator
+from typing import Any
 import black
 from pydantic_ai import Agent
 
 from .input_utils import wait_for_input
 from .log_config import setup_logging, log_markdown
 from .node_utils import print_node
+from .base_agent import BaseAgent
+from .telegram_message_sender import TelegramMessageSender
 
 
 logger = setup_logging(__name__)
@@ -49,19 +51,26 @@ Always be clear about:
 - That you've completed this single step
 
 Always be precise and methodical in your browser interactions. When performing multi-step tasks,
-complete each step before moving to the next. Provide clear feedback about what actions you're taking."""
+complete each step before moving to the next. Provide clear feedback about what actions you're taking.
+
+IMPORTANT: When you have completed a step or have results to share with the user, you MUST use the send_telegram_message tool.
+If you take a screenshot, use the send_telegram_image tool to send it.
+Do not include the results in your output - instead, send them via the telegram tools.
+"""
 
 
-class BrowserInteractionAgent:
+class BrowserInteractionAgent(BaseAgent):
     """An agent specifically for browser interaction and automation tasks."""
 
-    def __init__(self, model, mcp_servers):
+    def __init__(self, message_sender: TelegramMessageSender, model, mcp_servers):
         """Initialize the browser interaction agent.
 
         Args:
+            message_sender: The TelegramMessageSender instance
             model: The AI model to use
             mcp_servers: List of MCP servers (typically Playwright and Memory servers)
         """
+        super().__init__(message_sender)
         self.model = model
 
         # Initialize the agent with browser interaction system prompt
@@ -72,24 +81,28 @@ class BrowserInteractionAgent:
             name="BrowserInteractionAgent",
         )
 
-    async def execute_goal_step(self, goal: str, usage: Any = None) -> AsyncGenerator[dict, None]:
+        # Set up telegram tools from base class
+        self._setup_telegram_tools()
+
+    async def execute_goal_step(self, goal: str, usage: Any = None) -> None:
         """
         Execute a single step towards completing a goal using the browser.
 
         This method determines what constitutes the first step of the goal
         and executes it. The agent will decide when the step is completed
-        and return the result.
+        and send the result via telegram.
 
         Args:
             goal: The overall goal to be achieved
             usage: Usage tracking from parent agent
-
-        Yields:
-            Dictionaries containing response chunks with step results
         """
         step_prompt = f"""Goal: {goal}
 
 Execute the next appropriate step towards completing this goal."""
+
+        if not self.agent:
+            logger.error("Agent not initialized")
+            return
 
         async with self.agent.iter(step_prompt, usage=usage) as agent_run:
             log_markdown("## BrowserInteractionAgent - execute_goal_step")
@@ -105,30 +118,19 @@ Execute the next appropriate step towards completing this goal."""
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
-            result = agent_run.result.output if agent_run.result else "No result"
+            # The agent should have already sent messages via the telegram tools
+            if agent_run.result and agent_run.result.output:
+                logger.debug(f"Agent output: {agent_run.result.output}")
 
-            yield {
-                "type": "text",
-                "text": result,
-                "step_completed": True,
-            }
-
-    async def execute_browser_task(
-        self, task: str, usage: Any = None
-    ) -> AsyncGenerator[dict, None]:
+    async def execute_browser_task(self, task: str, usage: Any = None) -> None:
         """
-        Execute a browser automation task and yield results.
+        Execute a browser automation task and send results via telegram.
 
-        This method is kept for backward compatibility but delegates
-        to execute_goal_step for consistency.
+        This method delegates to execute_goal_step for consistency.
 
         Args:
             task: The browser task to execute
             usage: Usage tracking from parent agent
-
-        Yields:
-            Dictionaries containing response chunks
         """
         # Delegate to the new method for consistency
-        async for chunk in self.execute_goal_step(task, usage):
-            yield chunk
+        await self.execute_goal_step(task, usage)
