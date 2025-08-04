@@ -73,7 +73,7 @@ def setup_logging(logger_name: Optional[str] = None):
     os.makedirs(log_dir, exist_ok=True)
 
     # Configure file logging with rotation
-    log_filename = f"{log_dir}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_pydantic_mcp.log"
+    log_filename = f"{log_dir}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_conversation_agent.log"
 
     # Create handlers with different log levels
     file_handler = RotatingFileHandler(

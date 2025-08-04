@@ -11,9 +11,9 @@ node = "20"  # For MCP servers like Playwright
 _.python.venv = { path = ".venv", create = true }
 PYTHONPATH = "."
 
-[tasks.pydantic_mcp]
-run = "uv run -m src.pydantic_mcp"
-description = "Run the Pydantic MCP agent standalone"
+[tasks.conversation_agent]
+run = "uv run -m src.conversation_agent"
+description = "Run the Conversation Agent standalone"
 
 [tasks.telegram_bot]
 run = "uv run -m src.telegram_bot"

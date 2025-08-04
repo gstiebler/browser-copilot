@@ -239,9 +239,9 @@ class ConversationAgent(BaseAgent):
             return
 
         async with self.agent.iter(query, message_history=self.message_history) as agent_run:
-            log_markdown("# pydantic mcp")
+            log_markdown("# conversation agent")
             async for node in agent_run:
-                log_markdown("## pydantic mcp node")
+                log_markdown("## conversation agent node")
                 logger.debug(
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )

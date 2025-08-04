@@ -17,10 +17,10 @@ uv run python src/telegram_bot.py
 # Or use mise task runner
 mise run telegram_bot
 
-# Test the pydantic MCP agent
-uv run python src/pydantic_mcp.py
+# Test the conversation agent
+uv run python src/conversation_agent.py
 # Or use mise task runner
-mise run pydantic_mcp
+mise run conversation_agent
 
 # Test the browser agent standalone
 uv run python src/browser_agent.py
@@ -51,7 +51,7 @@ pre-commit run --all-files
    - Manages MCP server lifecycle (startup/shutdown)
    - Uses MarkdownV2 parsing for message formatting
 
-2. **src/pydantic_mcp.py**: AI Agent implementation
+2. **src/conversation_agent.py**: AI Agent implementation
    - ConversationAgent class manages conversation history
    - Integrates multiple MCP servers (calculator, browser, PDF, memory, filesystem)
    - Supports both OpenRouter (via OPENROUTER_API_KEY) and Google Gemini models
@@ -119,7 +119,7 @@ The system supports multiple AI providers:
 
 - **Task Runner**: Uses `mise` for task management (see mise.toml)
   - `mise run telegram_bot` - Run the Telegram bot
-  - `mise run pydantic_mcp` - Run the MCP agent standalone
+  - `mise run conversation_agent` - Run the Conversation Agent standalone
   
 - **Package Manager**: Uses `uv` for Python dependency management
   - Fast, Rust-based package installer
