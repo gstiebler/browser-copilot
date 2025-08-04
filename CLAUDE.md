@@ -18,12 +18,12 @@ uv run python src/telegram_bot.py
 mise run telegram_bot
 
 # Test the conversation agent
-uv run python src/conversation_agent.py
+uv run python src/agents/conversation_agent.py
 # Or use mise task runner
 mise run conversation_agent
 
-# Test the browser agent standalone
-uv run python src/browser_agent.py
+# Test the browser interaction agent standalone
+uv run python src/agents/browser_interaction_agent.py
 
 # Run linting
 uv run ruff check .
@@ -51,18 +51,20 @@ pre-commit run --all-files
    - Manages MCP server lifecycle (startup/shutdown)
    - Uses MarkdownV2 parsing for message formatting
 
-2. **src/conversation_agent.py**: AI Agent implementation
-   - ConversationAgent class manages conversation history
-   - Integrates multiple MCP servers (calculator, browser, PDF, memory, filesystem)
-   - Supports both OpenRouter (via OPENROUTER_API_KEY) and Google Gemini models
-   - Handles screenshot capture and image responses
-   - Implements browser_interact tool for web automation tasks
-
-3. **src/browser_agent.py**: Specialized browser automation agent
-   - BrowserAgent class specifically for Playwright MCP server
-   - Handles browser navigation, screenshots, form filling, and web scraping
-   - Processes screenshot nodes and returns image paths
-   - Works in conjunction with ConversationAgent for browser tasks
+2. **src/agents/**: Agent implementations organized by responsibility
+   - **base_agent.py**: Abstract base class for all agents
+   - **conversation_agent.py**: Main AI agent that manages conversation history
+     - Integrates multiple MCP servers (calculator, browser, PDF, memory, filesystem)
+     - Supports both OpenRouter (via OPENROUTER_API_KEY) and Google Gemini models
+     - Handles screenshot capture and image responses
+     - Implements browser_interact tool for web automation tasks
+   - **browser_interaction_agent.py**: Specialized browser automation agent
+     - Handles browser navigation, screenshots, form filling, and web scraping
+     - Processes screenshot nodes and returns image paths
+     - Works in conjunction with ConversationAgent for browser tasks
+   - **page_analysis_agent.py**: Analyzes web page structure and content
+     - Performs goal-aware filtering and hierarchy detection
+     - Extracts structured information from web pages
 
 ### MCP Server Integration
 

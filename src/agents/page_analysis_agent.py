@@ -5,11 +5,11 @@ import black
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 
-from .input_utils import wait_for_input
-from .log_config import setup_logging, log_markdown
-from .node_utils import print_node
+from ..input_utils import wait_for_input
+from ..log_config import setup_logging, log_markdown
+from ..node_utils import print_node
 from .base_agent import BaseAgent
-from .telegram_message_sender import TelegramMessageSender
+from ..telegram_message_sender import TelegramMessageSender
 
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")

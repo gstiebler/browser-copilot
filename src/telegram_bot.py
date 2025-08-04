@@ -10,7 +10,7 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
-from .conversation_agent import ConversationAgent, TEMP_FOLDER
+from .agents.conversation_agent import ConversationAgent, TEMP_FOLDER
 from .telegram_message_sender import TelegramMessageSender
 from .log_config import setup_logging
 

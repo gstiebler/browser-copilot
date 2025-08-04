@@ -5,15 +5,15 @@ from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
 import logfire
 
-from src.input_utils import wait_for_input
-from .log_config import setup_logging, log_markdown
+from ..input_utils import wait_for_input
+from ..log_config import setup_logging, log_markdown
 import black
 from .browser_interaction_agent import BrowserInteractionAgent
 from .page_analysis_agent import PageAnalysisAgent
-from .model_config import get_model
-from .node_utils import print_node
+from ..model_config import get_model
+from ..node_utils import print_node
 from .base_agent import BaseAgent
-from .telegram_message_sender import TelegramMessageSender
+from ..telegram_message_sender import TelegramMessageSender
 
 
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN", "")

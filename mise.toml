@@ -12,7 +12,7 @@ _.python.venv = { path = ".venv", create = true }
 PYTHONPATH = "."
 
 [tasks.conversation_agent]
-run = "uv run -m src.conversation_agent"
+run = "uv run -m src.agents.conversation_agent"
 description = "Run the Conversation Agent standalone"
 
 [tasks.telegram_bot]
@@ -20,8 +20,8 @@ run = "uv run -m src.telegram_bot"
 description = "Run the Telegram bot (main entry point)"
 
 [tasks.browser_agent]
-run = "uv run -m src.browser_agent"
-description = "Test the browser agent standalone"
+run = "uv run -m src.agents.browser_interaction_agent"
+description = "Test the browser interaction agent standalone"
 
 [tasks.lint]
 run = "uv run ruff check . && uv run ruff format ."

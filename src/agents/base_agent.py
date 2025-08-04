@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import Optional
 from pydantic_ai import Agent, RunContext
-from .telegram_message_sender import TelegramMessageSender
-from .log_config import setup_logging
+from ..telegram_message_sender import TelegramMessageSender
+from ..log_config import setup_logging
 
 
 logger = setup_logging(__name__)

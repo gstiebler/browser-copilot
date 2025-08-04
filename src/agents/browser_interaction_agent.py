@@ -2,11 +2,11 @@ from typing import Any
 import black
 from pydantic_ai import Agent
 
-from .input_utils import wait_for_input
-from .log_config import setup_logging, log_markdown
-from .node_utils import print_node
+from ..input_utils import wait_for_input
+from ..log_config import setup_logging, log_markdown
+from ..node_utils import print_node
 from .base_agent import BaseAgent
-from .telegram_message_sender import TelegramMessageSender
+from ..telegram_message_sender import TelegramMessageSender
 
 
 logger = setup_logging(__name__)
