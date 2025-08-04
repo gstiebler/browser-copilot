@@ -41,8 +41,6 @@ Examples of useful information to store include:
 - User information that can be useful in future interactions
 - Processes that have a chance to be repeated in the future
 
-ALWAYS start by listing the memories in the root of the memory server.
-
 IMPORTANT: When you have a response for the user, you MUST use the send_telegram_message tool to send it.
 Do not include the response in your output - instead, send it via the telegram tool.
 """
@@ -54,30 +52,48 @@ class ConversationAgent(BaseAgent):
     def __init__(self, message_sender: TelegramMessageSender) -> None:
         """Initialize the agent with model and MCP server configuration."""
         super().__init__(message_sender)
+
+        # Create single instances of each MCP server
+        self.calculator_server = MCPServerStdio("uvx", args=["mcp-server-calculator"])
+        self.pdf_server = MCPServerStdio(
+            "uvx",
+            args=[
+                "--from",
+                "git+https://github.com/gstiebler/pdf-mcp-server.git",
+                "pdf-mcp-server",
+            ],
+        )
+        self.memory_server = MCPServerStdio(
+            "uvx",
+            args=[
+                "--from",
+                "git+https://github.com/gstiebler/h-memory-mcp-server.git",
+                "h-memory-mcp-server",
+                "--memory-file",
+                "memory.json",
+            ],
+        )
+        self.filesystem_server = MCPServerStdio(
+            "npx",
+            args=["@modelcontextprotocol/server-filesystem", TEMP_FOLDER],
+        )
+        self.playwright_server = MCPServerStdio(
+            "npx",
+            args=[
+                "@playwright/mcp@latest",
+                "--output-dir",
+                TEMP_FOLDER,
+                "--image-responses",
+                "omit",
+            ],
+        )
+
+        # Collect all servers for the main agent
         mcp_servers = [
-            MCPServerStdio("uvx", args=["mcp-server-calculator"]),
-            MCPServerStdio(
-                "uvx",
-                args=[
-                    "--from",
-                    "git+https://github.com/gstiebler/pdf-mcp-server.git",
-                    "pdf-mcp-server",
-                ],
-            ),
-            MCPServerStdio(
-                "uvx",
-                args=[
-                    "--from",
-                    "git+https://github.com/gstiebler/h-memory-mcp-server.git",
-                    "h-memory-mcp-server",
-                    "--memory-file",
-                    "memory.json",
-                ],
-            ),
-            MCPServerStdio(
-                "npx",
-                args=["@modelcontextprotocol/server-filesystem", TEMP_FOLDER],
-            ),
+            self.calculator_server,
+            self.pdf_server,
+            self.memory_server,
+            self.filesystem_server,
         ]
 
         # Initialize the model
@@ -182,44 +198,16 @@ class ConversationAgent(BaseAgent):
         # Initialize browser agents
         browser_model = get_model(BROWSER_MODEL_NAME)
 
-        # Initialize Playwright MCP server
-        from pydantic_ai.mcp import MCPServerStdio
-        import os
-
-        TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
-
-        playwright_server = MCPServerStdio(
-            "npx",
-            args=[
-                "@playwright/mcp@latest",
-                "--output-dir",
-                TEMP_FOLDER,
-                "--image-responses",
-                "omit",
-            ],
-        )
-
-        memory_server = MCPServerStdio(
-            "uvx",
-            args=[
-                "--from",
-                "git+https://github.com/gstiebler/h-memory-mcp-server.git",
-                "h-memory-mcp-server",
-                "--memory-file",
-                "memory.json",
-            ],
-        )
-
         # Browser interaction agent gets both Playwright and Memory servers
-        interaction_mcp_servers = [playwright_server, memory_server]
+        interaction_mcp_servers = [self.playwright_server, self.memory_server]
         self.browser_interaction_agent = BrowserInteractionAgent(
             self.message_sender, browser_model, interaction_mcp_servers
         )
 
         # Page analysis agent only gets Playwright server
-        analysis_mcp_servers = [playwright_server]
+        analysis_mcp_servers = [self.playwright_server]
         self.page_analysis_agent = PageAnalysisAgent(
-            self.message_sender, browser_model, analysis_mcp_servers, playwright_server
+            self.message_sender, browser_model, analysis_mcp_servers, self.playwright_server
         )
 
         # Start MCP servers for interaction agent (which will start both Playwright and Memory)
