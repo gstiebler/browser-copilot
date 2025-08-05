@@ -165,28 +165,9 @@ class ConversationAgent(BaseAgent):
             if not self.page_analysis_agent:
                 return "Page analysis agent not initialized. Please navigate to a webpage first."
 
-            snapshot = await self.page_analysis_agent.capture_page_snapshot(usage=ctx.usage)
+            summary = await self.page_analysis_agent.capture_page_snapshot(usage=ctx.usage)
 
-            # Note: The agent will send the screenshot via the telegram tool if needed
-            # We'll include the path in the response for the agent to handle
-
-            # Format the response
-            response_parts = []
-
-            if snapshot.get("page_summary"):
-                response_parts.append(f"**Page Summary:** {snapshot['page_summary']}")
-
-            if snapshot.get("interactable_elements"):
-                response_parts.append("\n**Interactable Elements:**")
-                for element in snapshot["interactable_elements"]:
-                    response_parts.append(element)
-            else:
-                response_parts.append("\nNo interactable elements found on the page.")
-
-            if snapshot.get("screenshot_path"):
-                response_parts.append(f"\n**Screenshot saved to:** {snapshot['screenshot_path']}")
-
-            return "\n".join(response_parts)
+            return summary
 
     async def __aenter__(self) -> "ConversationAgent":
         """Enter async context manager for MCP servers."""

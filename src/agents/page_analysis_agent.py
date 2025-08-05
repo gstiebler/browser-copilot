@@ -92,9 +92,7 @@ class PageAnalysisAgent(BaseAgent):
         # Set up telegram tools from base class
         self._setup_telegram_tools()
 
-    async def capture_page_snapshot(
-        self, goal_summary: str = "", usage: Any = None
-    ) -> Dict[str, Any]:
+    async def capture_page_snapshot(self, goal_summary: str = "", usage: Any = None) -> str:
         """
         Capture a snapshot of the current web page and analyze it to extract interactable elements
         relevant to the current goal.
@@ -162,6 +160,6 @@ class PageAnalysisAgent(BaseAgent):
                 )
 
             if not agent_run.result:
-                raise ValueError("No result from agent run")
-            result["page_summary"] = agent_run.result.output
-        return result
+                logger.error("No result from agent run")
+                return ""
+            return agent_run.result.output
