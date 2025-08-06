@@ -120,18 +120,29 @@ class ConversationAgent(BaseAgent):
 
         # Create browser interaction tool
         @self.agent.tool
-        async def browser_interact(ctx: RunContext[None], task: str) -> str:
-            """Interact with web browsers to perform tasks like navigation, screenshots, and automation.
-            It can:
-            - Navigate to websites
-            - Take screenshots
-            - Click on elements
-            - Fill forms
-            - Extract information from web pages
-            - Perform various browser automation tasks
+        async def browser_interact(ctx: RunContext[None], current_goal: str) -> str:
+            """Execute browser automation tasks ONE STEP at a time using a specialized browser agent.
+
+            The browser agent will:
+            - Navigate to websites and URLs
+            - Click on buttons, links, and interactive elements (using browser_evaluate for reliability)
+            - Fill out and submit forms
+            - Extract specific information from web pages
+            - Take screenshots when needed
+            - Perform complex multi-step browser workflows
+
+            IMPORTANT: The browser agent executes ONE logical step per invocation:
+            - It will determine and execute only the next single step towards the goal
+            - It will return a concise summary of what was accomplished in that step
+            - For multi-step tasks, you need to call this tool multiple times
+
+            Example: For "find FIFA World Champion 1958":
+            - First call: Searches for FIFA website → returns "Found FIFA website: www.fifa.com"
+            - Second call: Navigates to FIFA website → returns result of that step
+            - Continue calling until the goal is achieved
 
             Args:
-                task: Description of the browser task to perform
+                current_goal: Description of the current goal
 
             Returns:
                 Result of the browser interaction
@@ -141,7 +152,7 @@ class ConversationAgent(BaseAgent):
 
             # Execute browser task - it will send messages directly
             result = await self.browser_interaction_agent.execute_browser_task(
-                task, usage=ctx.usage
+                current_goal, usage=ctx.usage
             )
 
             # Return the result directly
