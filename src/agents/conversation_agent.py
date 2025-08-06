@@ -33,16 +33,20 @@ TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
 MAIN_MODEL_NAME = os.getenv("MAIN_MODEL", "")
 BROWSER_MODEL_NAME = os.getenv("BROWSER_MODEL", "")
 
-system_prompt = """You are a helpful AI assistant that can help users with various tasks.
-After each iteration, reflect if there's something useful that you should store in the memory server.
-Examples of useful information to store include:
-- Important URLs or web pages
-- User preferences
-- User information that can be useful in future interactions
-- Processes that have a chance to be repeated in the future
+system_prompt = """You are a helpful AI assistant that can help users with various tasks on the browser.
+
+You will coordinate with the browser interaction agent to perform tasks such as:
+- Navigating to websites and URLs
+- Clicking on buttons, links, and interactive elements
+- Filling out and submitting forms
+- Extracting specific information from web pages
+- Performing complex multi-step browser workflows
+It is pretty smart. Share your current goal with it and it will execute ONE STEP at a time.
 
 IMPORTANT: When you have a response for the user, you MUST use the send_telegram_message tool to send it.
 Do not include the response in your output - instead, send it via the telegram tool.
+
+
 """
 
 
@@ -63,6 +67,7 @@ class ConversationAgent(BaseAgent):
                 "pdf-mcp-server",
             ],
         )
+        """
         self.memory_server = MCPServerStdio(
             "uvx",
             args=[
@@ -73,6 +78,7 @@ class ConversationAgent(BaseAgent):
                 "memory.json",
             ],
         )
+        """
         self.filesystem_server = MCPServerStdio(
             "npx",
             args=["@modelcontextprotocol/server-filesystem", TEMP_FOLDER],
@@ -92,7 +98,7 @@ class ConversationAgent(BaseAgent):
         mcp_servers = [
             self.calculator_server,
             self.pdf_server,
-            self.memory_server,
+            # self.memory_server,
             self.filesystem_server,
         ]
 
@@ -196,7 +202,7 @@ class ConversationAgent(BaseAgent):
         browser_model = get_model(BROWSER_MODEL_NAME)
 
         # Browser interaction agent gets both Playwright and Memory servers
-        interaction_mcp_servers = [self.playwright_server, self.memory_server]
+        interaction_mcp_servers = [self.playwright_server]  # , self.memory_server]
         self.browser_interaction_agent = BrowserInteractionAgent(
             self.message_sender, browser_model, interaction_mcp_servers
         )

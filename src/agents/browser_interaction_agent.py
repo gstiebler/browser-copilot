@@ -34,11 +34,12 @@ Important notes for clicking elements:
   }
   ```
 
-IMPORTANT: When given a goal, you must execute ONE STEP at a time:
+IMPORTANT: When given a goal, you must execute ONE STEP, and then STOP:
 1. Determine what the logical first/next step should be
 2. Execute only that single step
 3. Clearly indicate when the step is completed
 4. Return a concise summary of what was accomplished in this step
+5. STOP
 
 For example, if the goal is "determine who was the FIFA World Champion in 1958":
 - First step might be: Search Google for "FIFA official website"
@@ -52,9 +53,6 @@ Always be clear about:
 
 Always be precise and methodical in your browser interactions. When performing multi-step tasks,
 complete each step before moving to the next. Provide clear feedback about what actions you're taking.
-
-IMPORTANT: When you have completed a step or have results to share with the user, you MUST use the send_telegram_message tool.
-If you take a screenshot, use the send_telegram_image tool to send it.
 
 Your response should have TWO distinct sections:
 
@@ -92,9 +90,6 @@ class BrowserInteractionAgent(BaseAgent):
             system_prompt=system_prompt,
             name="BrowserInteractionAgent",
         )
-
-        # Set up telegram tools from base class
-        self._setup_telegram_tools()
 
     async def execute_goal_step(self, goal: str, usage: Any = None) -> str:
         """
