@@ -92,7 +92,7 @@ class PageAnalysisAgent(BaseAgent):
         # Set up telegram tools from base class
         self._setup_telegram_tools()
 
-    async def capture_page_snapshot(self, goal_summary: str = "", usage: Any = None) -> str:
+    async def capture_page_snapshot(self, goal_summary: str, usage: Any = None) -> str:
         """
         Capture a snapshot of the current web page and analyze it to extract interactable elements
         relevant to the current goal.
@@ -131,11 +131,8 @@ class PageAnalysisAgent(BaseAgent):
         except Exception as e:
             logger.warning(f"Failed to capture screenshot directly: {e}")
 
-        # Build the prompt with goal context
-        goal_context = f"\n\nCURRENT GOAL: {goal_summary}" if goal_summary else ""
-
         # Now get the accessibility snapshot and analyze it
-        snapshot_prompt = f"""Please: {goal_context}
+        snapshot_prompt = f"""Please: \n\nCURRENT GOAL: {goal_summary}
 
 1. Use browser_snapshot to get the accessibility tree
 2. Analyze the snapshot and provide a summary of the page and list of goal-relevant interactable elements."""

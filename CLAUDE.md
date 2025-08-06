@@ -63,8 +63,10 @@ pre-commit run --all-files
      - Processes screenshot nodes and returns image paths
      - Works in conjunction with ConversationAgent for browser tasks
    - **page_analysis_agent.py**: Analyzes web page structure and content
-     - Performs goal-aware filtering and hierarchy detection
-     - Extracts structured information from web pages
+     - Performs goal-aware filtering of interactable elements based on current task
+     - Takes screenshots and sends them via Telegram
+     - Extracts structured information from web pages using accessibility tree
+     - Returns formatted summaries with relevant UI elements for the given goal
 
 ### MCP Server Integration
 

@@ -149,7 +149,7 @@ class ConversationAgent(BaseAgent):
 
         # Create page snapshot tool
         @self.agent.tool
-        async def capture_webpage_snapshot(ctx: RunContext[None]) -> str:
+        async def capture_webpage_snapshot(ctx: RunContext[None], goal_summary: str) -> str:
             """Capture a comprehensive snapshot of the current web page including:
             - A screenshot of the current page
             - A summary of the page content
@@ -159,13 +159,18 @@ class ConversationAgent(BaseAgent):
             you can interact with (buttons, links, inputs, etc.) along with their
             reference IDs for use in subsequent interactions.
 
+            Args:
+                goal_summary: Summary of the current goal/task being performed to focus the analysis
+
             Returns:
                 A formatted summary and list of interactable elements
             """
             if not self.page_analysis_agent:
                 return "Page analysis agent not initialized. Please navigate to a webpage first."
 
-            summary = await self.page_analysis_agent.capture_page_snapshot(usage=ctx.usage)
+            summary = await self.page_analysis_agent.capture_page_snapshot(
+                goal_summary=goal_summary, usage=ctx.usage
+            )
 
             return summary
 
