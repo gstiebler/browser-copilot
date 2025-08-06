@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict
+from typing import Any
 from datetime import datetime
 import black
 from pydantic_ai import Agent
@@ -106,10 +106,6 @@ class PageAnalysisAgent(BaseAgent):
             - page_summary: Brief description of the page, and a list of goal-relevant clickable/fillable elements
             - screenshot_path: Path to the screenshot if taken
         """
-        result: Dict[str, Any] = {
-            "page_summary": "",
-            "screenshot_path": None,
-        }
 
         # First, ALWAYS capture a screenshot directly via MCP
         try:
@@ -125,7 +121,6 @@ class PageAnalysisAgent(BaseAgent):
 
             # Set the screenshot path
             screenshot_path = f"{TEMP_FOLDER}/{screenshot_filename}"
-            result["screenshot_path"] = screenshot_path
 
             # Log the screenshot in markdown
             log_markdown(f"![Screenshot]({screenshot_filename})")
