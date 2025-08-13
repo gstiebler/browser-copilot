@@ -40,7 +40,7 @@ No human will read anything that is not sent via the telegram tool.
 Do not include the response in your output - instead, send it via the telegram tool.
 If you need the input from the user, STOP, and wait for the user to provide it.
 Lean towards doing less, and waiting for the user to confirm before proceeding.
-
+Send a telegram message after the end of each interaction.
 
 """
 
@@ -202,10 +202,8 @@ class ConversationAgent(BaseAgent):
             self.message_sender, browser_model, interaction_mcp_servers
         )
 
-        # Page analysis agent only gets Playwright server
-        analysis_mcp_servers = [self.playwright_server]
         self.page_analysis_agent = PageAnalysisAgent(
-            self.message_sender, browser_model, analysis_mcp_servers, self.playwright_server
+            self.message_sender, browser_model, self.playwright_server
         )
 
         # Start MCP servers for interaction agent (which will start both Playwright and Memory)

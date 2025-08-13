@@ -66,7 +66,6 @@ class PageAnalysisAgent(BaseAgent):
         self,
         message_sender: TelegramMessageSender,
         model,
-        mcp_servers,
         playwright_server: MCPServerStdio,
     ):
         """Initialize the page analysis agent.
@@ -84,7 +83,6 @@ class PageAnalysisAgent(BaseAgent):
         # Initialize the agent with page analysis system prompt
         self.agent = Agent(
             self.model,
-            mcp_servers=mcp_servers,
             system_prompt=system_prompt,
             name="PageAnalysisAgent",
         )
