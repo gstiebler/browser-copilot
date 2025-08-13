@@ -90,7 +90,7 @@ class PageAnalysisAgent(BaseAgent):
         )
 
         # Set up telegram tools from base class
-        self._setup_telegram_tools()
+        # self._setup_telegram_image_tool()
 
     async def capture_page_snapshot(self, goal_summary: str, usage: Any = None) -> str:
         """

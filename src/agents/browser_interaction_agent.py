@@ -46,6 +46,8 @@ For example, if the goal is "determine who was the FIFA World Champion in 1958":
 - After finding it's www.fifa.com, return: "Found the FIFA website: www.fifa.com"
 - Do NOT continue to the next step (visiting the website)
 
+Lean towards doing less, and stopping after each step.
+
 Always be clear about:
 - What step you're executing
 - What the result of that step is
