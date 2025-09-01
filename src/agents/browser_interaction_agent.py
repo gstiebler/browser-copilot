@@ -1,5 +1,6 @@
 from typing import Any
 import black
+import logfire
 from pydantic_ai import Agent
 
 from ..input_utils import wait_for_input
@@ -152,4 +153,6 @@ Execute the next appropriate step towards completing this goal."""
             String containing the agent's output
         """
         # Delegate to the new method for consistency
-        return await self.execute_goal_step(task, usage)
+        with logfire.span(f"BrowserInteractionAgent - {task[:30]}") as span:
+            span.set_attribute("content", task)
+            return await self.execute_goal_step(task, usage)
