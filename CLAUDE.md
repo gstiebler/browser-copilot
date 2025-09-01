@@ -84,7 +84,6 @@ Required environment variables (.env):
 - `ANTHROPIC_API_KEY`: Anthropic API key for Claude models (optional)
 - `OPENROUTER_API_KEY`: API key for OpenRouter (optional)
 - `GEMINI_API_KEY`: Google Gemini API key (optional)
-- `LOGFIRE_TOKEN`: Token for Logfire monitoring and instrumentation
 - `TEMPDIR`: Temporary directory path (default: "/tmp")
 - `FILE_LOG_LEVEL`: File logging level (default: "DEBUG")
 - `CONSOLE_LOG_LEVEL`: Console logging level (default: "INFO")

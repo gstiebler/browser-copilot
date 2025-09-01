@@ -59,7 +59,6 @@ OPENROUTER_API_KEY=your_openrouter_key    # For various models
 GEMINI_API_KEY=your_gemini_key            # For Google models
 
 # Optional
-LOGFIRE_TOKEN=your_logfire_token          # For monitoring
 TEMPDIR=/tmp                              # Temporary files directory
 ```
 
