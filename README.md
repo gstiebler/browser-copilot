@@ -17,7 +17,7 @@ A gRPC service that uses AI agents to interact with web browsers on behalf of us
 
 ### Prerequisites
 
-- Python 3.11+ (see `.python-version`)
+- Python 3.13+ (see `.python-version`)
 - [uv](https://docs.astral.sh/uv/) package manager
 - Node.js 20+ (for MCP servers)
 - [mise](https://mise.jdx.dev/) (optional, for task running)

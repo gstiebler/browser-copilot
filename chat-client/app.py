@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 
 import grpc
 import streamlit as st
-from .model_config import StreamlitConfig, ChatClientConfig
+from model_config import StreamlitConfig, ChatClientConfig
 
 # Add proto directory to path
 proto_path = Path(__file__).parent.parent / "proto"

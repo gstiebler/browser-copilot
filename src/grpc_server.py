@@ -10,6 +10,7 @@ from concurrent import futures
 from agents.conversation_agent import ConversationAgent
 from .grpc_message_sender import GrpcMessageSender
 from .log_config import setup_logging
+from agents.model_config import AgentConfig
 
 # Set up module logger first
 logger = setup_logging(__name__)
@@ -245,7 +246,8 @@ async def serve(port: int = 50051) -> None:
 
 def main() -> None:
     """Create and run the gRPC server."""
-    port = int(os.getenv("GRPC_PORT", "50051"))
+    config = AgentConfig.from_env()
+    port = config.grpc_port
     logger.info("gRPC server is starting...")
     asyncio.run(serve(port))
 

@@ -9,7 +9,7 @@ class ChatClientConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    server_address: str = "localhost:50051"
+    server_address: str = "localhost:50059"
     session_id: str = ""
     auto_reconnect: bool = True
     connection_timeout: float = 5.0
@@ -17,8 +17,9 @@ class ChatClientConfig(BaseModel):
     @classmethod
     def from_env(cls) -> "ChatClientConfig":
         """Load configuration from environment variables."""
+        grpc_port = os.getenv("GRPC_PORT", "50059")
         return cls(
-            server_address=os.getenv("GRPC_SERVER_ADDRESS", "localhost:50051"),
+            server_address=f"localhost:{grpc_port}",
             session_id=os.getenv("SESSION_ID", ""),
             auto_reconnect=os.getenv("AUTO_RECONNECT", "true").lower() == "true",
             connection_timeout=float(os.getenv("CONNECTION_TIMEOUT", "5.0")),

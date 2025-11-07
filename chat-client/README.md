@@ -12,7 +12,7 @@ A Streamlit web application for interacting with the Browser Copilot gRPC servic
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.13+
 - Browser Copilot gRPC server running (see main README for setup)
 - Dependencies installed via `uv sync` (from project root)
 
