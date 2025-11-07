@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import Optional
 from pydantic_ai import Agent, RunContext
-from ..grpc_message_sender import GrpcMessageSender
-from ..log_config import setup_logging
+from src.grpc_message_sender import GrpcMessageSender
+from src.log_config import setup_logging
 
 
 logger = setup_logging(__name__)

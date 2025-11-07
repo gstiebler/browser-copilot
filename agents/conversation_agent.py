@@ -5,15 +5,15 @@ from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
 import logfire
 
-from ..input_utils import wait_for_input
-from ..log_config import setup_logging, log_markdown
+from src.input_utils import wait_for_input
+from src.log_config import setup_logging, log_markdown
 import black
 from .browser_interaction_agent import BrowserInteractionAgent
 from .page_analysis_agent import PageAnalysisAgent
-from ..model_config import get_model
-from ..node_utils import print_node
+from src.model_config import get_model
+from src.node_utils import print_node
 from .base_agent import BaseAgent
-from ..grpc_message_sender import GrpcMessageSender
+from src.grpc_message_sender import GrpcMessageSender
 
 
 # Set up logging

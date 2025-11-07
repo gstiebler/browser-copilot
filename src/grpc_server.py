@@ -7,7 +7,7 @@ from typing import Dict, Any, AsyncIterator, Type, cast
 from pathlib import Path
 from concurrent import futures
 
-from .agents.conversation_agent import ConversationAgent
+from agents.conversation_agent import ConversationAgent
 from .grpc_message_sender import GrpcMessageSender
 from .log_config import setup_logging
 

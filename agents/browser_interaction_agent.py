@@ -3,11 +3,11 @@ import black
 import logfire
 from pydantic_ai import Agent
 
-from ..input_utils import wait_for_input
-from ..log_config import setup_logging, log_markdown
-from ..node_utils import print_node
+from src.input_utils import wait_for_input
+from src.log_config import setup_logging, log_markdown
+from src.node_utils import print_node
 from .base_agent import BaseAgent
-from ..grpc_message_sender import GrpcMessageSender
+from src.grpc_message_sender import GrpcMessageSender
 
 
 logger = setup_logging(__name__)
