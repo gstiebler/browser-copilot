@@ -2,9 +2,9 @@
 import os
 import sys
 import asyncio
-from typing import Dict, Any, AsyncIterator, TYPE_CHECKING, Type, cast
+import importlib
+from typing import Dict, Any, AsyncIterator, Type, cast
 from pathlib import Path
-import grpc
 from concurrent import futures
 
 from .agents.conversation_agent import ConversationAgent
@@ -14,43 +14,43 @@ from .log_config import setup_logging
 # Set up module logger first
 logger = setup_logging(__name__)
 
+# Import gRPC runtime dynamically to avoid static import errors before dependencies are installed
+grpc: Any
+try:
+    grpc = importlib.import_module("grpc")
+except ImportError as exc:  # pragma: no cover - handled at runtime by installation instructions
+    raise ImportError(
+        "grpc module not found. Install dependencies with `uv sync` or `pip install grpcio`."
+    ) from exc
+
 # Import generated proto types
 # These will be generated from proto/browser_copilot.proto using:
 # python -m grpc_tools.protoc -I proto --python_out=proto --grpc_python_out=proto proto/browser_copilot.proto
+pb2: Any = None
+pb2_grpc: Any = None
+
 try:
     # Add proto directory to path if not already there
     proto_path = Path(__file__).parent.parent / "proto"
-    if str(proto_path.parent) not in sys.path:
-        sys.path.insert(0, str(proto_path.parent))
+    if str(proto_path) not in sys.path:
+        sys.path.insert(0, str(proto_path))
 
-    import proto.browser_copilot_pb2 as pb2
-    import proto.browser_copilot_pb2_grpc as pb2_grpc
-except ImportError:
+    pb2 = importlib.import_module("browser_copilot_pb2")
+    pb2_grpc = importlib.import_module("browser_copilot_pb2_grpc")
+except ImportError as e:
     # Fallback for when proto files haven't been generated yet
     logger.warning(
-        "Proto files not generated yet. Run: python -m grpc_tools.protoc -I proto --python_out=proto --grpc_python_out=proto proto/browser_copilot.proto"
-    )
-    pb2 = None  # type: ignore[assignment]
-    pb2_grpc = None  # type: ignore[assignment]
-
-# Define base class for type checking
-_BaseServicer: Type[Any]
-if TYPE_CHECKING:
-    try:
-        from proto import browser_copilot_pb2_grpc as _pb2_grpc_type
-
-        _BaseServicer = _pb2_grpc_type.BrowserCopilotServiceServicer
-    except ImportError:
-        _BaseServicer = object
-else:
-    # Runtime: use conditional base class
-    _BaseServicer = cast(
-        Type[Any],
-        pb2_grpc.BrowserCopilotServiceServicer if pb2_grpc else object,
+        f"Proto files import failed: {e}. Run: python -m grpc_tools.protoc -I proto --python_out=proto --grpc_python_out=proto proto/browser_copilot.proto"
     )
 
+# Define base class for gRPC servicer
+_BaseServicer = cast(
+    Type[Any],
+    pb2_grpc.BrowserCopilotServiceServicer if pb2_grpc else object,
+)
 
-class BrowserCopilotServicer(_BaseServicer):  # type: ignore[misc]
+
+class BrowserCopilotServicer(_BaseServicer):  # type: ignore[misc, valid-type]
     """gRPC service implementation for browser copilot."""
 
     def __init__(self) -> None:
@@ -221,7 +221,7 @@ async def serve(port: int = 50051) -> None:
     """
     if pb2 is None or pb2_grpc is None:
         raise ImportError(
-            "Proto files not generated. Run: python -m grpc_tools.protoc -I proto --python_out=. --grpc_python_out=. proto/browser_copilot.proto"
+            "Proto files not generated. Run: python -m grpc_tools.protoc -I proto --python_out=proto --grpc_python_out=proto proto/browser_copilot.proto"
         )
 
     server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))

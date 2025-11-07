@@ -90,9 +90,15 @@ mise run dev
 The service exposes a gRPC API with server-side streaming. Example client usage:
 
 ```python
+import sys
+from pathlib import Path
 import grpc
-import proto.browser_copilot_pb2 as pb2
-import proto.browser_copilot_pb2_grpc as pb2_grpc
+
+# Ensure generated modules are on the Python path when running from the repo
+sys.path.append(str(Path(__file__).resolve().parent / "proto"))
+
+import browser_copilot_pb2 as pb2
+import browser_copilot_pb2_grpc as pb2_grpc
 
 # Connect to server
 channel = grpc.insecure_channel('localhost:50051')
