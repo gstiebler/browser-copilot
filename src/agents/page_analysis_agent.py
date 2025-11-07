@@ -9,7 +9,7 @@ from ..input_utils import wait_for_input
 from ..log_config import setup_logging, log_markdown
 from ..node_utils import print_node
 from .base_agent import BaseAgent
-from ..telegram_message_sender import TelegramMessageSender
+from ..grpc_message_sender import GrpcMessageSender
 
 
 TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
@@ -53,9 +53,9 @@ RELEVANT INTERACTABLE ELEMENTS:
 - [element details]
 etc.
 
-IMPORTANT: If you capture a screenshot, use the send_telegram_image tool to send it to the user.
-Use the send_telegram_message tool to send your analysis to the user.
-Do not include the analysis in your output - instead, send it via the telegram tools.
+IMPORTANT: If you capture a screenshot, use the send_image tool to send it to the user.
+Use the send_message tool to send your analysis to the user.
+Do not include the analysis in your output - instead, send it via the message tools.
 """
 
 
@@ -64,14 +64,14 @@ class PageAnalysisAgent(BaseAgent):
 
     def __init__(
         self,
-        message_sender: TelegramMessageSender,
+        message_sender: GrpcMessageSender,
         model,
         playwright_server: MCPServerStdio,
     ):
         """Initialize the page analysis agent.
 
         Args:
-            message_sender: The TelegramMessageSender instance
+            message_sender: The GrpcMessageSender instance
             model: The AI model to use
             mcp_servers: List of MCP servers
             playwright_server: The Playwright MCP server instance for direct screenshot calls
@@ -87,8 +87,8 @@ class PageAnalysisAgent(BaseAgent):
             name="PageAnalysisAgent",
         )
 
-        # Set up telegram tools from base class
-        # self._setup_telegram_image_tool()
+        # Set up messaging tools from base class
+        # Note: Tools are set up via base class _setup_telegram_tools() method
 
     async def capture_page_snapshot(self, goal_summary: str, usage: Any = None) -> str:
         """
@@ -112,7 +112,7 @@ class PageAnalysisAgent(BaseAgent):
             screenshot_filename = f"page-snapshot-{timestamp}.png"
 
             # Call the screenshot tool directly using the Playwright server property
-            screenshot_result = await self.playwright_server.call_tool(
+            screenshot_result = await self.playwright_server.call_tool(  # type: ignore[call-arg]
                 "browser_take_screenshot", {"filename": screenshot_filename}
             )
             logger.debug(f"Screenshot taken: {screenshot_result}")
@@ -152,4 +152,4 @@ class PageAnalysisAgent(BaseAgent):
             if not agent_run.result:
                 logger.error("No result from agent run")
                 return ""
-            return agent_run.result.output
+            return str(agent_run.result.output)

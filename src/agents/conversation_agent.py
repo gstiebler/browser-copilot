@@ -13,7 +13,7 @@ from .page_analysis_agent import PageAnalysisAgent
 from ..model_config import get_model
 from ..node_utils import print_node
 from .base_agent import BaseAgent
-from ..telegram_message_sender import TelegramMessageSender
+from ..grpc_message_sender import GrpcMessageSender
 
 
 # Set up logging
@@ -32,12 +32,12 @@ BROWSER_MODEL_NAME = os.getenv("BROWSER_MODEL", "")
 
 system_prompt = """You are a helpful AI assistant that can help users with various tasks on the browser.
 
-IMPORTANT: When you have a response for the user, you MUST use the send_telegram_message tool to send it. 
-No human will read anything that is not sent via the telegram tool.
-Do not include the response in your output - instead, send it via the telegram tool.
+IMPORTANT: When you have a response for the user, you MUST use the send_message tool to send it. 
+No human will read anything that is not sent via the message tool.
+Do not include the response in your output - instead, send it via the message tool.
 If you need the input from the user, STOP, and wait for the user to provide it.
 Lean towards doing less, and waiting for the user to confirm before proceeding.
-Send a telegram message after the end of each interaction.
+Send a message after the end of each interaction.
 
 """
 
@@ -45,7 +45,7 @@ Send a telegram message after the end of each interaction.
 class ConversationAgent(BaseAgent):
     """A conversational agent that maintains message history across interactions."""
 
-    def __init__(self, message_sender: TelegramMessageSender) -> None:
+    def __init__(self, message_sender: GrpcMessageSender) -> None:
         """Initialize the agent with model and MCP server configuration."""
         super().__init__(message_sender)
 
@@ -105,7 +105,7 @@ class ConversationAgent(BaseAgent):
             name="ConversationAgent",
         )
 
-        # Set up telegram tools from base class
+        # Set up messaging tools from base class
         self._setup_telegram_tools()
 
         # Store conversation history
@@ -248,7 +248,7 @@ class ConversationAgent(BaseAgent):
                 # Store conversation history
                 self.message_history = agent_run.result.all_messages()
 
-                # The agent should have already sent messages via the telegram tools
+                # The agent should have already sent messages via the message tools
                 # Log the output for debugging
                 if agent_run.result.output:
                     logger.debug(f"Agent output: {agent_run.result.output}")

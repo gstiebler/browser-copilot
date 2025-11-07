@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Optional
 from pydantic_ai import Agent, RunContext
-from ..telegram_message_sender import TelegramMessageSender
+from ..grpc_message_sender import GrpcMessageSender
 from ..log_config import setup_logging
 
 
@@ -9,19 +9,19 @@ logger = setup_logging(__name__)
 
 
 class BaseAgent(ABC):
-    """Base class for all agents that need to send Telegram messages."""
+    """Base class for all agents that need to send messages."""
 
-    def __init__(self, message_sender: TelegramMessageSender):
+    def __init__(self, message_sender: GrpcMessageSender):
         """Initialize the base agent.
 
         Args:
-            message_sender: The TelegramMessageSender instance for sending messages
+            message_sender: The GrpcMessageSender instance for sending messages
         """
         self.message_sender = message_sender
         self.agent: Optional[Agent[None, str]] = None
 
     def _setup_telegram_tools(self):
-        """Set up Telegram messaging tools for the agent.
+        """Set up messaging tools for the agent.
 
         This should be called after self.agent is initialized in the subclass.
         """
@@ -29,8 +29,8 @@ class BaseAgent(ABC):
             raise ValueError("Agent must be initialized before setting up tools")
 
         @self.agent.tool
-        async def send_telegram_message(ctx: RunContext[None], text: str) -> str:
-            """Send a text message to the Telegram user.
+        async def send_message(ctx: RunContext[None], text: str) -> str:
+            """Send a text message to the user.
 
             Args:
                 text: The text message to send
@@ -40,15 +40,15 @@ class BaseAgent(ABC):
             """
             try:
                 await self.message_sender.send_text(text)
-                logger.debug(f"Sent telegram message: {text[:100]}...")
+                logger.debug(f"Sent message: {text[:100]}...")
                 return "Message sent successfully"
             except Exception as e:
-                logger.error(f"Failed to send telegram message: {e}")
+                logger.error(f"Failed to send message: {e}")
                 return f"Failed to send message: {str(e)}"
 
         @self.agent.tool
-        async def send_telegram_image(ctx: RunContext[None], image_path: str) -> str:
-            """Send an image to the Telegram user.
+        async def send_image(ctx: RunContext[None], image_path: str) -> str:
+            """Send an image to the user.
 
             Args:
                 image_path: Path to the image file to send
@@ -58,8 +58,8 @@ class BaseAgent(ABC):
             """
             try:
                 await self.message_sender.send_image(image_path)
-                logger.debug(f"Sent telegram image: {image_path}")
+                logger.debug(f"Sent image: {image_path}")
                 return "Image sent successfully"
             except Exception as e:
-                logger.error(f"Failed to send telegram image: {e}")
+                logger.error(f"Failed to send image: {e}")
                 return f"Failed to send image: {str(e)}"

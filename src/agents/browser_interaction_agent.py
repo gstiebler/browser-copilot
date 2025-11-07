@@ -7,7 +7,7 @@ from ..input_utils import wait_for_input
 from ..log_config import setup_logging, log_markdown
 from ..node_utils import print_node
 from .base_agent import BaseAgent
-from ..telegram_message_sender import TelegramMessageSender
+from ..grpc_message_sender import GrpcMessageSender
 
 
 logger = setup_logging(__name__)
@@ -76,11 +76,11 @@ Separate these sections clearly in your response.
 class BrowserInteractionAgent(BaseAgent):
     """An agent specifically for browser interaction and automation tasks."""
 
-    def __init__(self, message_sender: TelegramMessageSender, model, mcp_servers):
+    def __init__(self, message_sender: GrpcMessageSender, model, mcp_servers):
         """Initialize the browser interaction agent.
 
         Args:
-            message_sender: The TelegramMessageSender instance
+            message_sender: The GrpcMessageSender instance
             model: The AI model to use
             mcp_servers: List of MCP servers (typically Playwright and Memory servers)
         """
@@ -101,7 +101,7 @@ class BrowserInteractionAgent(BaseAgent):
 
         This method determines what constitutes the first step of the goal
         and executes it. The agent will decide when the step is completed
-        and send the result via telegram.
+        and send the result via message streaming.
 
         Args:
             goal: The overall goal to be achieved
@@ -132,16 +132,16 @@ Execute the next appropriate step towards completing this goal."""
                     f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
                 )
 
-            # The agent should have already sent messages via the telegram tools
+            # The agent should have already sent messages via the message tools
             if agent_run.result and agent_run.result.output:
                 logger.debug(f"Agent output: {agent_run.result.output}")
-                return agent_run.result.output
+                return str(agent_run.result.output)
             else:
                 return "No result from browser interaction"
 
     async def execute_browser_task(self, task: str, usage: Any = None) -> str:
         """
-        Execute a browser automation task and send results via telegram.
+        Execute a browser automation task and send results via message streaming.
 
         This method delegates to execute_goal_step for consistency.
 
