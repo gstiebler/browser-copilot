@@ -1,16 +1,14 @@
 from typing import List, Any, Optional
+import logging
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
 import logfire
 
-from src.input_utils import wait_for_input
 from src.log_config import setup_logging, log_markdown
-import black
 from .browser_interaction_agent import BrowserInteractionAgent
 from .page_analysis_agent import PageAnalysisAgent
 from src.model_config import get_model
-from src.node_utils import print_node
 from .base_agent import BaseAgent
 from src.grpc_message_sender import GrpcMessageSender
 from .model_config import AgentConfig
@@ -22,8 +20,19 @@ config = AgentConfig.from_env()
 # Set up logging
 logger = setup_logging(__name__)
 
+# Configure logfire to disable sending and suppress opentelemetry errors
 logfire_scrubbing = False if config.file_log_level == "DEBUG" else None
 logfire.configure(send_to_logfire=False)
+
+# Suppress opentelemetry exporter errors (they're non-fatal)
+# These errors occur because the exporter tries to connect even when send_to_logfire=False
+opentelemetry_logger = logging.getLogger("opentelemetry")
+opentelemetry_logger.setLevel(logging.CRITICAL)
+opentelemetry_exporter_logger = logging.getLogger(
+    "opentelemetry.exporter.otlp.proto.http.trace_exporter"
+)
+opentelemetry_exporter_logger.setLevel(logging.CRITICAL)
+
 logfire.instrument_pydantic_ai()
 
 system_prompt = """You are a helpful AI assistant that can help users with various tasks on the browser.
@@ -218,6 +227,7 @@ class ConversationAgent(BaseAgent):
     async def run_query(self, query: str) -> None:
         """
         Run a query and store the messages in history.
+        Streams LLM tokens as they are generated.
 
         Args:
             query: The user's query
@@ -227,27 +237,30 @@ class ConversationAgent(BaseAgent):
             logger.error("Agent not initialized")
             return
 
-        async with self.agent.iter(query, message_history=self.message_history) as agent_run:
+        # Use run_stream to get streaming text tokens from the LLM
+        async with self.agent.run_stream(query, message_history=self.message_history) as result:
             log_markdown("# conversation agent")
-            async for node in agent_run:
-                log_markdown("## conversation agent node")
-                logger.debug(
-                    f"{node.__class__.__name__}: {black.format_str(str(node), mode=black.Mode())}"
-                )
 
-                print_node(node, 3)
+            # Track what we've already sent to avoid duplicates
+            # result.stream() returns accumulated text, so we need to track the last position
+            last_sent_length = 0
 
-                # Pause and wait for user confirmation
-                wait_for_input()
+            # Stream text chunks as they come from the LLM
+            async for accumulated_text in result.stream():
+                # Only send the new incremental chunk (difference from what we've sent)
+                if len(accumulated_text) > last_sent_length:
+                    new_chunk = accumulated_text[last_sent_length:]
+                    await self.message_sender.send_text_chunk(new_chunk)
+                    logger.debug(f"Streamed text chunk: {new_chunk[:50]}...")
+                    last_sent_length = len(accumulated_text)
 
-            if agent_run.result is not None:
-                # Store conversation history
-                self.message_history = agent_run.result.all_messages()
+            # Update message history from stream result
+            if result is not None:
+                self.message_history = result.all_messages()
 
-                # The agent should have already sent messages via the message tools
                 # Log the output for debugging
-                if agent_run.result.output:
-                    logger.debug(f"Agent output: {agent_run.result.output}")
+                if hasattr(result, "output") and result.output:
+                    logger.debug(f"Agent output: {result.output}")
 
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""

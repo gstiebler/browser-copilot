@@ -32,6 +32,21 @@ class GrpcMessageSender:
         except Exception as e:
             logger.error(f"Error queueing text message: {e}")
 
+    async def send_text_chunk(self, text_chunk: str) -> None:
+        """Send a text chunk for streaming (incremental updates).
+
+        Args:
+            text_chunk: A chunk of text to stream (can be partial)
+        """
+        try:
+            # Create a message response dict for streaming chunks
+            # The client will accumulate these chunks
+            response = {"text": text_chunk}
+            await self.response_queue.put(response)
+            logger.debug(f"Queued text chunk for streaming: {text_chunk[:50]}...")
+        except Exception as e:
+            logger.error(f"Error queueing text chunk: {e}")
+
     async def send_image(self, image_path: str) -> None:
         """Send an image to the client via streaming.
 
