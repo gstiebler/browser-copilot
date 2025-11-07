@@ -12,6 +12,7 @@ dependencies = [
     "pydantic-ai>=0.7.6",
     "grpcio>=1.60.0",
     "grpcio-tools>=1.60.0",
+    "streamlit>=1.28.0",
 ]
 
 [project.scripts]
