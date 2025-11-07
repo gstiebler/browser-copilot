@@ -1,4 +1,3 @@
-import os
 from typing import List, Any, Optional
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
@@ -14,21 +13,18 @@ from src.model_config import get_model
 from src.node_utils import print_node
 from .base_agent import BaseAgent
 from src.grpc_message_sender import GrpcMessageSender
+from .model_config import AgentConfig
 
+
+# Load configuration from environment
+config = AgentConfig.from_env()
 
 # Set up logging
 logger = setup_logging(__name__)
 
-file_log_level = os.getenv("FILE_LOG_LEVEL", "DEBUG").upper()
-logfire_scrubbing = False if file_log_level == "DEBUG" else None
+logfire_scrubbing = False if config.file_log_level == "DEBUG" else None
 logfire.configure(send_to_logfire=False)
 logfire.instrument_pydantic_ai()
-
-
-TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
-
-MAIN_MODEL_NAME = os.getenv("MAIN_MODEL", "")
-BROWSER_MODEL_NAME = os.getenv("BROWSER_MODEL", "")
 
 system_prompt = """You are a helpful AI assistant that can help users with various tasks on the browser.
 
@@ -73,14 +69,14 @@ class ConversationAgent(BaseAgent):
         """
         self.filesystem_server = MCPServerStdio(
             "npx",
-            args=["@modelcontextprotocol/server-filesystem", TEMP_FOLDER],
+            args=["@modelcontextprotocol/server-filesystem", config.temp_folder],
         )
         self.playwright_server = MCPServerStdio(
             "npx",
             args=[
                 "@playwright/mcp@latest",
                 "--output-dir",
-                TEMP_FOLDER,
+                config.temp_folder,
                 "--image-responses",
                 "omit",
             ],
@@ -95,7 +91,7 @@ class ConversationAgent(BaseAgent):
         ]
 
         # Initialize the model
-        self.model = get_model(MAIN_MODEL_NAME)
+        self.model = get_model(config.main_model_name)
 
         # Initialize the agent with MCP server
         self.agent = Agent(
@@ -191,7 +187,7 @@ class ConversationAgent(BaseAgent):
         await self.mcp_context.__aenter__()
 
         # Initialize browser agents
-        browser_model = get_model(BROWSER_MODEL_NAME)
+        browser_model = get_model(config.browser_model_name)
 
         # Browser interaction agent gets both Playwright and Memory servers
         interaction_mcp_servers = [self.playwright_server]  # , self.memory_server]

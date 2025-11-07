@@ -1,4 +1,3 @@
-import os
 from typing import Any
 from datetime import datetime
 import black
@@ -10,9 +9,11 @@ from src.log_config import setup_logging, log_markdown
 from src.node_utils import print_node
 from .base_agent import BaseAgent
 from src.grpc_message_sender import GrpcMessageSender
+from .model_config import AgentConfig
 
 
-TEMP_FOLDER = os.getenv("TEMPDIR", "/tmp")
+# Load configuration from environment
+config = AgentConfig.from_env()
 logger = setup_logging(__name__)
 
 
@@ -118,7 +119,7 @@ class PageAnalysisAgent(BaseAgent):
             logger.debug(f"Screenshot taken: {screenshot_result}")
 
             # Set the screenshot path
-            screenshot_path = f"{TEMP_FOLDER}/{screenshot_filename}"
+            screenshot_path = f"{config.temp_folder}/{screenshot_filename}"
 
             # Log the screenshot in markdown
             log_markdown(f"![Screenshot]({screenshot_filename})")

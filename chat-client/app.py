@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 
 import grpc
 import streamlit as st
+from .model_config import StreamlitConfig, ChatClientConfig
 
 # Add proto directory to path
 proto_path = Path(__file__).parent.parent / "proto"
@@ -21,11 +22,16 @@ except ImportError as e:
     st.error(f"Failed to import proto files: {e}")
     st.stop()
 
+
+# Load configuration from environment
+streamlit_config = StreamlitConfig.from_env()
+client_config = ChatClientConfig.from_env()
+
 # Page configuration
 st.set_page_config(
-    page_title="Browser Copilot Chat",
-    page_icon="🤖",
-    layout="wide",
+    page_title=streamlit_config.page_title,
+    page_icon=streamlit_config.page_icon,
+    layout=streamlit_config.layout,
 )
 
 # Initialize session state
@@ -42,7 +48,7 @@ if "stub" not in st.session_state:
     st.session_state.stub = None
 
 if "server_address" not in st.session_state:
-    st.session_state.server_address = "localhost:50051"
+    st.session_state.server_address = client_config.server_address
 
 
 def create_grpc_connection(

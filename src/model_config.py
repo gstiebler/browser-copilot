@@ -1,4 +1,5 @@
 import os
+import logging
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings, ThinkingConfig
@@ -7,7 +8,7 @@ from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
-
+logger = logging.getLogger(__name__)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
@@ -19,6 +20,7 @@ def get_model(full_model_name: str) -> Model:
     gemini_thinking_config = ThinkingConfig(include_thoughts=True, thinking_budget=thinking_budget)
     gemini_model_settings = GeminiModelSettings(gemini_thinking_config=gemini_thinking_config)
 
+    logger.warning(f"Getting model: {full_model_name}")
     model_parts = full_model_name.split("/")
     if len(model_parts) < 2:
         raise ValueError(
