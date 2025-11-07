@@ -1,16 +1,17 @@
 # Browser Copilot
 
-A Telegram bot that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
+A gRPC service that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
 
 ## Features
 
 - 🤖 **AI-Powered Browser Automation**: Control web browsers using natural language
-- 💬 **Telegram Bot Interface**: Easy interaction through Telegram messages
+- 🔌 **gRPC API**: High-performance RPC interface with server-side streaming
 - 🏗️ **Multi-Agent Architecture**: Specialized agents for different tasks
 - 📄 **PDF Processing**: Automatic handling of PDF documents
 - 🧠 **Persistent Memory**: AI remembers context across sessions
 - 📸 **Screenshot Capture**: Visual feedback from browser interactions
-- 🔌 **Multiple AI Providers**: Support for Anthropic, OpenRouter, and Google Gemini
+- 🌐 **Multiple AI Providers**: Support for Anthropic, OpenRouter, and Google Gemini
+- 💬 **Session Management**: Stateful conversations with session IDs
 
 ## Quick Start
 
@@ -34,61 +35,95 @@ A Telegram bot that uses AI agents to interact with web browsers on behalf of us
    uv sync
    ```
 
-3. **Set up environment**
+3. **Generate gRPC proto files**
+   ```bash
+   ./generate_proto.sh
+   # Or manually:
+   python -m grpc_tools.protoc -I proto --python_out=proto --grpc_python_out=proto proto/browser_copilot.proto
+   ```
+
+4. **Set up environment**
    ```bash
    cp .env.example .env
    # Edit .env with your API keys
    ```
-
-4. **Create Telegram bot**
-   - Message [@BotFather](https://t.me/botfather) on Telegram
-   - Create a new bot and get your token
-   - Add the token to `TELEGRAM_TOKEN` in `.env`
 
 ### Configuration
 
 Required environment variables in `.env`:
 
 ```bash
-# Telegram Bot
-TELEGRAM_TOKEN=your_telegram_bot_token
-
 # AI Provider (choose at least one)
 ANTHROPIC_API_KEY=your_anthropic_key      # For Claude models
 OPENROUTER_API_KEY=your_openrouter_key    # For various models
 GEMINI_API_KEY=your_gemini_key            # For Google models
 
+# Model Configuration
+MAIN_MODEL=model_name                     # Main conversation model
+BROWSER_MODEL=model_name                  # Browser automation model
+
 # Optional
 TEMPDIR=/tmp                              # Temporary files directory
+GRPC_PORT=50051                           # gRPC server port (default: 50051)
 ```
 
 ## Usage
 
-### Start the Bot
+### Start the gRPC Server
 
 ```bash
 # Using uv
-uv run python src/telegram_bot.py
+uv run grpc-server
+
+# Or directly
+uv run python src/grpc_server.py
 
 # Using mise
-mise run telegram_bot
+mise run grpc-server
 
 # Development mode (with debug logging)
 mise run dev
 ```
 
-### Telegram Commands
+### gRPC API
 
-- `/start` - Initialize the bot
-- `/help` - Show available commands
-- Send any message for AI-powered responses
-- Send PDFs for automatic processing
+The service exposes a gRPC API with server-side streaming. Example client usage:
+
+```python
+import grpc
+import proto.browser_copilot_pb2 as pb2
+import proto.browser_copilot_pb2_grpc as pb2_grpc
+
+# Connect to server
+channel = grpc.insecure_channel('localhost:50051')
+stub = pb2_grpc.BrowserCopilotServiceStub(channel)
+
+# Send a message
+request = pb2.SendMessageRequest(
+    session_id="my-session-123",
+    message_type=pb2.MessageType.TEXT,
+    content="Navigate to example.com"
+)
+
+# Stream responses
+for response in stub.SendMessage(request):
+    if response.text:
+        print(f"Text: {response.text}")
+    elif response.image:
+        print(f"Image: {response.image.file_path}")
+```
+
+### Message Types
+
+- **TEXT**: Send text messages to the agent
+- **IMAGE**: Send image file paths
+- **PDF**: Send PDF file paths for processing
 
 ### Standalone Testing
 
 ```bash
 # Test conversation agent
-uv run python src/agents/conversation_agent.py
+uv run python src/dev/console_chatbot.py
 
 # Test browser interaction agent
 uv run python src/agents/browser_interaction_agent.py
@@ -98,7 +133,9 @@ uv run python src/agents/browser_interaction_agent.py
 
 ### Core Components
 
-- **`src/telegram_bot.py`**: Main Telegram bot interface
+- **`src/grpc_server.py`**: Main gRPC server implementation
+- **`src/grpc_message_sender.py`**: Message streaming handler
+- **`proto/browser_copilot.proto`**: gRPC service definition
 - **`src/agents/`**: AI agent implementations
   - `conversation_agent.py`: Main orchestrator agent
   - `browser_interaction_agent.py`: Browser automation specialist
@@ -145,10 +182,15 @@ src/
 │   ├── browser_interaction_agent.py
 │   └── page_analysis_agent.py
 ├── dev/                 # Development utilities
-├── telegram_bot.py      # Main bot entry point
+├── grpc_server.py       # Main gRPC server entry point
+├── grpc_message_sender.py  # Message streaming handler
 ├── model_config.py      # AI model configuration
 ├── log_config.py        # Logging setup
 └── ...                  # Other utilities
+proto/
+├── browser_copilot.proto    # gRPC service definition
+├── browser_copilot_pb2.py  # Generated message classes
+└── browser_copilot_pb2_grpc.py  # Generated service classes
 ```
 
 ### Code Quality
