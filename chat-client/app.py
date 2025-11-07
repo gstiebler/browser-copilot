@@ -41,6 +41,9 @@ if "channel" not in st.session_state:
 if "stub" not in st.session_state:
     st.session_state.stub = None
 
+if "server_address" not in st.session_state:
+    st.session_state.server_address = "localhost:50051"
+
 
 def create_grpc_connection(
     server_address: str,
@@ -62,28 +65,18 @@ def create_grpc_connection(
         return None, None
 
 
-def send_message(message: str, server_address: str) -> str:
+def send_message(message: str) -> str:
     """Send a message to the gRPC server and stream responses.
 
     Args:
         message: User message text
-        server_address: Server address in format 'host:port'
 
     Returns:
         Complete response text
     """
-    # Create or update connection
-    if (
-        st.session_state.channel is None
-        or st.session_state.stub is None
-        or st.session_state.get("server_address") != server_address
-    ):
-        channel, stub = create_grpc_connection(server_address)
-        if channel is None or stub is None:
-            return "Failed to connect to server"
-        st.session_state.channel = channel
-        st.session_state.stub = stub
-        st.session_state.server_address = server_address
+    # Ensure connection is established
+    if st.session_state.channel is None or st.session_state.stub is None:
+        return "Not connected to server. Please check the server address in the sidebar."
 
     # Create request
     request = pb2.SendMessageRequest(
@@ -123,9 +116,29 @@ with st.sidebar:
     st.title("⚙️ Configuration")
     server_address = st.text_input(
         "Server Address",
-        value="localhost:50051",
+        value=st.session_state.server_address,
         help="gRPC server address in format 'host:port'",
     )
+
+    # Update connection if server address changed
+    if server_address != st.session_state.server_address:
+        st.session_state.server_address = server_address
+        # Close existing connection if any
+        if st.session_state.channel is not None:
+            try:
+                st.session_state.channel.close()
+            except Exception:
+                pass
+        # Create new connection
+        channel, stub = create_grpc_connection(server_address)
+        st.session_state.channel = channel
+        st.session_state.stub = stub
+
+    # Initialize connection on startup if not already connected
+    if st.session_state.channel is None or st.session_state.stub is None:
+        channel, stub = create_grpc_connection(st.session_state.server_address)
+        st.session_state.channel = channel
+        st.session_state.stub = stub
 
     st.divider()
 
@@ -140,7 +153,7 @@ with st.sidebar:
         except Exception:
             st.warning("🟡 Connection status unknown")
     else:
-        st.info("⚪ Not connected")
+        st.error("🔴 Not connected")
 
     st.divider()
 
@@ -159,17 +172,14 @@ for message in st.session_state.messages:
 
 # Chat input
 if prompt := st.chat_input("Type your message here..."):
-    if not server_address.strip():
-        st.error("Please enter a server address in the sidebar")
-    else:
-        # Add user message to history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    # Add user message to history
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Send message and stream response
-        with st.chat_message("assistant"):
-            response = send_message(prompt, server_address.strip())
-            # Add assistant response to history
-            st.session_state.messages.append({"role": "assistant", "content": response})
+    # Send message and stream response
+    with st.chat_message("assistant"):
+        response = send_message(prompt)
+        # Add assistant response to history
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-        # Rerun to update the chat display
-        st.rerun()
+    # Rerun to update the chat display
+    st.rerun()
