@@ -17,6 +17,11 @@ uv run python src/telegram_bot.py
 # Or use mise task runner
 mise run telegram_bot
 
+# Run the REST API server
+uv run rest-server
+# Or use mise task runner
+mise run rest-server
+
 # Test the conversation agent
 uv run python src/agents/conversation_agent.py
 # Or use mise task runner
@@ -84,11 +89,11 @@ Required environment variables (.env):
 - `ANTHROPIC_API_KEY`: Anthropic API key for Claude models (optional)
 - `OPENROUTER_API_KEY`: API key for OpenRouter (optional)
 - `GEMINI_API_KEY`: Google Gemini API key (optional)
-- `LOGFIRE_TOKEN`: Token for Logfire monitoring and instrumentation
 - `TEMPDIR`: Temporary directory path (default: "/tmp")
 - `FILE_LOG_LEVEL`: File logging level (default: "DEBUG")
 - `CONSOLE_LOG_LEVEL`: Console logging level (default: "INFO")
 - `WAIT_FOR_INPUT`: If "true", pauses execution at certain points for debugging (default: "false")
+- `REST_PORT`: REST API server port (default: "8000")
 
 Model Configuration (choose one provider):
 - `MAIN_MODEL`: Main orchestrator model (e.g., "openrouter/your_model_name")
@@ -123,6 +128,7 @@ The system supports multiple AI providers:
 
 - **Task Runner**: Uses `mise` for task management (see mise.toml)
   - `mise run telegram_bot` - Run the Telegram bot
+  - `mise run rest-server` - Run the REST API server
   - `mise run conversation_agent` - Run the Conversation Agent standalone
   
 - **Package Manager**: Uses `uv` for Python dependency management
@@ -151,6 +157,17 @@ The system supports multiple AI providers:
   - Supports separate models for different tasks (main, browser, memory)
   - Configurable thinking budget for Claude models
   - Multiple provider support for failover/testing
+
+### REST API Server
+
+The project includes a REST API server with SSE (Server-Sent Events) for streaming responses:
+
+- **src/rest_server.py**: FastAPI-based REST server with SSE support
+  - POST `/api/message`: Send messages and receive streaming responses
+  - GET `/health`: Health check endpoint
+  - DELETE `/api/session/{session_id}`: Clean up session resources
+- **src/sse_message_sender.py**: Message sender for SSE streaming
+- **chat-client/app.py**: Streamlit chat client that connects to the REST API
 
 ### Utility Modules
 

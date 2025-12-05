@@ -7,6 +7,14 @@ from rich.console import Console
 from rich.markdown import Markdown
 from pathlib import Path
 
+# Try to import agent config, but make it optional
+try:
+    from agents.model_config import AgentConfig
+
+    _config: Optional[AgentConfig] = AgentConfig.from_env()
+except ImportError:
+    _config = None
+
 console = Console()
 
 # Session-specific markdown log file
@@ -84,8 +92,12 @@ def setup_logging(logger_name: Optional[str] = None):
     console_handler = logging.StreamHandler()
 
     # Set different log levels for each handler
-    file_log_level = os.getenv("FILE_LOG_LEVEL", "DEBUG").upper()
-    console_log_level = os.getenv("CONSOLE_LOG_LEVEL", "WARNING").upper()
+    if _config:
+        file_log_level = _config.file_log_level
+        console_log_level = _config.console_log_level
+    else:
+        file_log_level = os.getenv("FILE_LOG_LEVEL", "DEBUG").upper()
+        console_log_level = os.getenv("CONSOLE_LOG_LEVEL", "WARNING").upper()
 
     file_handler.setLevel(getattr(logging, file_log_level))
     console_handler.setLevel(getattr(logging, console_log_level))

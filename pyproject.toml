@@ -3,18 +3,35 @@ name = "browser-copilot"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "black>=25.1.0",
     "logfire>=3.21.1",
     "mcp[cli]>=1.9.4",
     "nest-asyncio>=1.6.0",
-    "pydantic-ai>=0.4.3",
-    "python-telegram-bot>=22.1",
+    "pydantic>=2.0.0",
+    "pydantic-ai>=0.7.6",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "sse-starlette>=2.2.0",
+    "requests>=2.32.0",
+    "sseclient-py>=1.8.0",
+    "streamlit>=1.28.0",
 ]
 
 [project.scripts]
-telegram = "src.telegram_bot:main"
+rest-server = "src.rest_server:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.uv]
+package = true
 
 [dependency-groups]
 dev = [
@@ -25,3 +42,19 @@ dev = [
 
 [tool.ruff]
 line-length = 100
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = false
+
+# Suppress import-untyped warnings for third-party libraries without type stubs
+[[tool.mypy.overrides]]
+module = [
+    "sse_starlette",
+    "sse_starlette.*",
+    "sseclient",
+]
+ignore_missing_imports = true
