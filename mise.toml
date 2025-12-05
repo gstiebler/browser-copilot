@@ -15,9 +15,9 @@ PYTHONPATH = "."
 run = "uv run -m src.agents.conversation_agent"
 description = "Run the Conversation Agent standalone"
 
-[tasks.grpc-server]
-run = "uv run grpc-server"
-description = "Run the gRPC server (main entry point)"
+[tasks.rest-server]
+run = "uv run rest-server"
+description = "Run the REST server (main entry point)"
 
 [tasks.browser_agent]
 run = "uv run -m src.agents.browser_interaction_agent"
@@ -45,10 +45,10 @@ description = "Install/sync dependencies"
 
 [tasks.dev]
 run = """
-echo "Starting gRPC server in development mode..."
-CONSOLE_LOG_LEVEL=DEBUG WAIT_FOR_INPUT=true uv run grpc-server
+echo "Starting REST server in development mode..."
+CONSOLE_LOG_LEVEL=DEBUG WAIT_FOR_INPUT=true uv run rest-server
 """
-description = "Run gRPC server in development mode with debug logging"
+description = "Run REST server in development mode with debug logging"
 
 [tasks.setup]
 run = """

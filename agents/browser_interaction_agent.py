@@ -7,7 +7,7 @@ from src.input_utils import wait_for_input
 from src.log_config import setup_logging, log_markdown
 from src.node_utils import print_node
 from .base_agent import BaseAgent
-from src.grpc_message_sender import GrpcMessageSender
+from src.sse_message_sender import SSEMessageSender
 
 
 logger = setup_logging(__name__)
@@ -76,11 +76,11 @@ Separate these sections clearly in your response.
 class BrowserInteractionAgent(BaseAgent):
     """An agent specifically for browser interaction and automation tasks."""
 
-    def __init__(self, message_sender: GrpcMessageSender, model, mcp_servers):
+    def __init__(self, message_sender: SSEMessageSender, model, mcp_servers):
         """Initialize the browser interaction agent.
 
         Args:
-            message_sender: The GrpcMessageSender instance
+            message_sender: The SSEMessageSender instance
             model: The AI model to use
             mcp_servers: List of MCP servers (typically Playwright and Memory servers)
         """

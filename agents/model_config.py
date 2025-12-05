@@ -15,7 +15,7 @@ class AgentConfig(BaseModel):
     file_log_level: str = "DEBUG"
     console_log_level: str = "INFO"
     wait_for_input: bool = False
-    grpc_port: int = 50059
+    rest_port: int = 8000
 
     @field_validator("file_log_level", mode="before")
     @classmethod
@@ -35,7 +35,7 @@ class AgentConfig(BaseModel):
             file_log_level=os.getenv("FILE_LOG_LEVEL", "DEBUG").upper(),
             console_log_level=os.getenv("CONSOLE_LOG_LEVEL", "INFO").upper(),
             wait_for_input=os.getenv("WAIT_FOR_INPUT", "false").lower() == "true",
-            grpc_port=int(os.getenv("GRPC_PORT", "50051")),
+            rest_port=int(os.getenv("REST_PORT", "8000")),
         )
 
 

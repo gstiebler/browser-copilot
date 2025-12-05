@@ -8,7 +8,7 @@ from src.input_utils import wait_for_input
 from src.log_config import setup_logging, log_markdown
 from src.node_utils import print_node
 from .base_agent import BaseAgent
-from src.grpc_message_sender import GrpcMessageSender
+from src.sse_message_sender import SSEMessageSender
 from .model_config import AgentConfig
 
 
@@ -65,14 +65,14 @@ class PageAnalysisAgent(BaseAgent):
 
     def __init__(
         self,
-        message_sender: GrpcMessageSender,
+        message_sender: SSEMessageSender,
         model,
         playwright_server: MCPServerStdio,
     ):
         """Initialize the page analysis agent.
 
         Args:
-            message_sender: The GrpcMessageSender instance
+            message_sender: The SSEMessageSender instance
             model: The AI model to use
             mcp_servers: List of MCP servers
             playwright_server: The Playwright MCP server instance for direct screenshot calls

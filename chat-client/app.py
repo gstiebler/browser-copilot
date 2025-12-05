@@ -1,26 +1,13 @@
 #!/usr/bin/env python3
-"""Streamlit chat client for Browser Copilot gRPC service."""
+"""Streamlit chat client for Browser Copilot REST API with SSE."""
 
-import sys
+import json
 import uuid
-from pathlib import Path
-from typing import Optional, Tuple
 
-import grpc
+import requests
 import streamlit as st
+import sseclient
 from model_config import StreamlitConfig, ChatClientConfig
-
-# Add proto directory to path
-proto_path = Path(__file__).parent.parent / "proto"
-if str(proto_path) not in sys.path:
-    sys.path.insert(0, str(proto_path))
-
-try:
-    import browser_copilot_pb2 as pb2
-    import browser_copilot_pb2_grpc as pb2_grpc
-except ImportError as e:
-    st.error(f"Failed to import proto files: {e}")
-    st.stop()
 
 
 # Load configuration from environment
@@ -41,38 +28,36 @@ if "messages" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-if "channel" not in st.session_state:
-    st.session_state.channel = None
+if "server_url" not in st.session_state:
+    # Convert gRPC address to REST URL
+    grpc_address = client_config.server_address
+    if ":" in grpc_address:
+        host, port = grpc_address.rsplit(":", 1)
+        # Default to port 8000 for REST API if gRPC port was 50051
+        rest_port = "8000" if port == "50051" else str(int(port) + 1000)
+        st.session_state.server_url = f"http://{host}:{rest_port}"
+    else:
+        st.session_state.server_url = "http://localhost:8000"
 
-if "stub" not in st.session_state:
-    st.session_state.stub = None
 
-if "server_address" not in st.session_state:
-    st.session_state.server_address = client_config.server_address
-
-
-def create_grpc_connection(
-    server_address: str,
-) -> Tuple[Optional[grpc.Channel], Optional[pb2_grpc.BrowserCopilotServiceStub]]:
-    """Create gRPC channel and stub for the given server address.
+def check_server_connection(server_url: str) -> bool:
+    """Check if the REST server is reachable.
 
     Args:
-        server_address: Server address in format 'host:port'
+        server_url: Base URL of the REST server
 
     Returns:
-        Tuple of (channel, stub) or (None, None) on error
+        True if server is reachable, False otherwise
     """
     try:
-        channel = grpc.insecure_channel(server_address)
-        stub = pb2_grpc.BrowserCopilotServiceStub(channel)
-        return channel, stub
-    except Exception as e:
-        st.error(f"Failed to create gRPC connection: {e}")
-        return None, None
+        response = requests.get(f"{server_url}/api/v1/health", timeout=5)
+        return response.status_code == 200
+    except Exception:
+        return False
 
 
 def send_message(message: str) -> str:
-    """Send a message to the gRPC server and stream responses.
+    """Send a message to the REST server and stream SSE responses.
 
     Args:
         message: User message text
@@ -80,35 +65,56 @@ def send_message(message: str) -> str:
     Returns:
         Complete response text
     """
-    # Ensure connection is established
-    if st.session_state.channel is None or st.session_state.stub is None:
-        return "Not connected to server. Please check the server address in the sidebar."
+    server_url = st.session_state.server_url
+    session_id = st.session_state.session_id
 
-    # Create request
-    request = pb2.SendMessageRequest(
-        session_id=st.session_state.session_id,
-        message_type=pb2.MessageType.TEXT,
-        content=message,
-    )
+    # Prepare request data
+    message_data = {"message_type": "TEXT", "content": message}
 
-    # Stream responses
     try:
+        # Create SSE request
+        response = requests.post(
+            f"{server_url}/api/v1/sessions/{session_id}/messages",
+            json=message_data,
+            headers={"Accept": "text/event-stream"},
+            stream=True,
+            timeout=60,
+        )
+
+        if response.status_code != 200:
+            return f"Server error: {response.status_code} - {response.text}"
+
+        # Process SSE stream
         response_text = ""
         response_placeholder = st.empty()
 
-        for response in st.session_state.stub.SendMessage(request):
-            if response.HasField("text"):
-                response_text += response.text
+        client = sseclient.SSEClient(response.iter_content())  # type: ignore
+
+        for event in client.events():
+            if event.event == "text":
+                chunk = event.data
+                response_text += chunk
                 # Update the placeholder with accumulated text
                 response_placeholder.markdown(response_text)
-            elif response.HasField("image"):
-                # For now, we only support text, but handle image gracefully
-                st.info(f"Image received: {response.image.file_path}")
+            elif event.event == "image":
+                # Handle image events
+                try:
+                    image_data = json.loads(event.data)
+                    st.info(f"Image received: {image_data.get('file_path', 'Unknown path')}")
+                except json.JSONDecodeError:
+                    st.warning("Received malformed image data")
+            elif event.event == "error":
+                error_msg = f"Server error: {event.data}"
+                st.error(error_msg)
+                return response_text + f"\n\n{error_msg}"
+            elif event.event == "complete":
+                # Stream completed successfully
+                break
 
         return response_text if response_text else "No response received"
 
-    except grpc.RpcError as e:
-        error_msg = f"gRPC error: {e.code()} - {e.details()}"
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Connection error: {str(e)}"
         st.error(error_msg)
         return error_msg
     except Exception as e:
@@ -120,31 +126,15 @@ def send_message(message: str) -> str:
 # Sidebar configuration
 with st.sidebar:
     st.title("⚙️ Configuration")
-    server_address = st.text_input(
-        "Server Address",
-        value=st.session_state.server_address,
-        help="gRPC server address in format 'host:port'",
+    server_url = st.text_input(
+        "Server URL",
+        value=st.session_state.server_url,
+        help="REST API server URL (e.g., http://localhost:8000)",
     )
 
-    # Update connection if server address changed
-    if server_address != st.session_state.server_address:
-        st.session_state.server_address = server_address
-        # Close existing connection if any
-        if st.session_state.channel is not None:
-            try:
-                st.session_state.channel.close()
-            except Exception:
-                pass
-        # Create new connection
-        channel, stub = create_grpc_connection(server_address)
-        st.session_state.channel = channel
-        st.session_state.stub = stub
-
-    # Initialize connection on startup if not already connected
-    if st.session_state.channel is None or st.session_state.stub is None:
-        channel, stub = create_grpc_connection(st.session_state.server_address)
-        st.session_state.channel = channel
-        st.session_state.stub = stub
+    # Update server URL if changed
+    if server_url != st.session_state.server_url:
+        st.session_state.server_url = server_url
 
     st.divider()
 
@@ -152,18 +142,19 @@ with st.sidebar:
     st.text(f"Session ID: {st.session_state.session_id[:8]}...")
 
     # Connection status
-    if st.session_state.channel is not None:
-        try:
-            grpc.channel_ready_future(st.session_state.channel).result(timeout=1)
-            st.success("🟢 Connected")
-        except Exception:
-            st.warning("🟡 Connection status unknown")
+    if check_server_connection(st.session_state.server_url):
+        st.success("🟢 Connected")
     else:
-        st.error("🔴 Not connected")
+        st.error("🔴 Server not reachable")
 
     st.divider()
 
     if st.button("Clear Chat History"):
+        st.session_state.messages = []
+        st.rerun()
+
+    if st.button("New Session"):
+        st.session_state.session_id = str(uuid.uuid4())
         st.session_state.messages = []
         st.rerun()
 

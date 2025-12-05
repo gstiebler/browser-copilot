@@ -10,7 +10,7 @@ from .browser_interaction_agent import BrowserInteractionAgent
 from .page_analysis_agent import PageAnalysisAgent
 from src.model_config import get_model
 from .base_agent import BaseAgent
-from src.grpc_message_sender import GrpcMessageSender
+from src.sse_message_sender import SSEMessageSender
 from .model_config import AgentConfig
 
 
@@ -50,7 +50,7 @@ Send a message after the end of each interaction.
 class ConversationAgent(BaseAgent):
     """A conversational agent that maintains message history across interactions."""
 
-    def __init__(self, message_sender: GrpcMessageSender) -> None:
+    def __init__(self, message_sender: SSEMessageSender) -> None:
         """Initialize the agent with model and MCP server configuration."""
         super().__init__(message_sender)
 

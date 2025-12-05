@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Browser Copilot is a gRPC-based service that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
+Browser Copilot is a REST API service with Server-Sent Events (SSE) streaming that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
 
 ## Development Commands
 
@@ -12,10 +12,10 @@ Browser Copilot is a gRPC-based service that uses AI agents to interact with web
 # Install dependencies using uv
 uv sync
 
-# Run the gRPC server (main entry point)
-uv run grpc-server
+# Run the REST server (main entry point)
+uv run rest-server
 # Or use mise task runner
-mise run grpc-server
+mise run rest-server
 
 # Test the conversation agent
 uv run python src/agents/conversation_agent.py
@@ -43,10 +43,10 @@ pre-commit run --all-files
 
 ### Core Components
 
-1. **src/grpc_server.py**: Main gRPC server interface
+1. **src/rest_server.py**: Main REST API server interface
    - Entry point for the application
-   - Handles client messages via gRPC streaming
-   - PDF and image document handling
+   - Handles client messages via HTTP with SSE streaming
+   - PDF and image document handling via file upload endpoints
    - Integrates with ConversationAgent for AI-powered responses
    - Manages MCP server lifecycle (startup/shutdown)
    - Session management for multiple concurrent clients
@@ -80,7 +80,7 @@ The system uses multiple MCP servers:
 ### Environment Configuration
 
 Required environment variables (.env):
-- `GRPC_PORT`: Port for gRPC server (default: 50051)
+- `REST_PORT`: Port for REST API server (default: 8000)
 - `ANTHROPIC_API_KEY`: Anthropic API key for Claude models (optional)
 - `OPENROUTER_API_KEY`: API key for OpenRouter (optional)
 - `GEMINI_API_KEY`: Google Gemini API key (optional)
@@ -104,24 +104,24 @@ The system supports multiple AI providers:
 - **Multi-Agent Architecture**: Separate agents for general tasks and browser-specific operations
 - **Conversation Memory**: Maintains context across interactions using message history
 - **Browser Automation**: Full web browser control through natural language
-- **PDF Processing**: Automatic handling of PDF documents sent via gRPC
+- **PDF Processing**: Automatic handling of PDF documents via HTTP file upload
 - **Persistent Memory**: AI can store and retrieve information across sessions
 - **Streaming Responses**: Yields intermediate results for real-time feedback
 - **Comprehensive Logging**: Colored console output and file logging with Logfire integration
 
 ### Message Flow
 
-1. User sends message/document to gRPC server
-2. gRPC server receives and forwards to ConversationAgent
+1. User sends message/document to REST API server via HTTP POST
+2. REST server receives and forwards to ConversationAgent
 3. ConversationAgent processes with appropriate MCP servers
 4. For browser tasks, delegates to BrowserAgent via browser_interact tool
-5. Results (text/images) are streamed back to user
+5. Results (text/images) are streamed back via Server-Sent Events (SSE)
 6. Conversation history is maintained for context
 
 ### Development Tools
 
 - **Task Runner**: Uses `mise` for task management (see mise.toml)
-  - `mise run grpc-server` - Run the gRPC server
+  - `mise run rest-server` - Run the REST server
   - `mise run conversation_agent` - Run the Conversation Agent standalone
   
 - **Package Manager**: Uses `uv` for Python dependency management
@@ -182,10 +182,10 @@ The system supports multiple AI providers:
    pre-commit install
    ```
 
-3. **gRPC Server Setup**:
-   - Configure GRPC_PORT in .env (default: 50051)
-   - Start the server with `uv run grpc-server`
-   - Connect clients to the gRPC endpoint
+3. **REST API Server Setup**:
+   - Configure REST_PORT in .env (default: 8000)
+   - Start the server with `uv run rest-server`
+   - Connect clients to the HTTP endpoints with SSE support
 
 ### Common Issues and Solutions
 

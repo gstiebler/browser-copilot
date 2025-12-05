@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Optional
 from pydantic_ai import Agent, RunContext
-from src.grpc_message_sender import GrpcMessageSender
+from src.sse_message_sender import SSEMessageSender
 from src.log_config import setup_logging
 
 
@@ -11,11 +11,11 @@ logger = setup_logging(__name__)
 class BaseAgent(ABC):
     """Base class for all agents that need to send messages."""
 
-    def __init__(self, message_sender: GrpcMessageSender):
+    def __init__(self, message_sender: SSEMessageSender):
         """Initialize the base agent.
 
         Args:
-            message_sender: The GrpcMessageSender instance for sending messages
+            message_sender: The SSEMessageSender instance for sending messages
         """
         self.message_sender = message_sender
         self.agent: Optional[Agent[None, str]] = None
