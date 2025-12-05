@@ -20,7 +20,7 @@ class BaseAgent(ABC):
         self.message_sender = message_sender
         self.agent: Optional[Agent[None, str]] = None
 
-    def _setup_telegram_tools(self):
+    def _setup_messaging_tools(self):
         """Set up messaging tools for the agent.
 
         This should be called after self.agent is initialized in the subclass.

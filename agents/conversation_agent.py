@@ -111,7 +111,7 @@ class ConversationAgent(BaseAgent):
         )
 
         # Set up messaging tools from base class
-        self._setup_telegram_tools()
+        self._setup_messaging_tools()
 
         # Store conversation history
         self.message_history: List[ModelMessage] = []

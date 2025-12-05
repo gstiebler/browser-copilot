@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Browser Copilot is a Telegram bot that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
+Browser Copilot is a gRPC-based service that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
 
 ## Development Commands
 
@@ -12,10 +12,10 @@ Browser Copilot is a Telegram bot that uses AI agents to interact with web brows
 # Install dependencies using uv
 uv sync
 
-# Run the Telegram bot (main entry point)
-uv run python src/telegram_bot.py
+# Run the gRPC server (main entry point)
+uv run grpc-server
 # Or use mise task runner
-mise run telegram_bot
+mise run grpc-server
 
 # Test the conversation agent
 uv run python src/agents/conversation_agent.py
@@ -43,13 +43,13 @@ pre-commit run --all-files
 
 ### Core Components
 
-1. **src/telegram_bot.py**: Main Telegram bot interface
+1. **src/grpc_server.py**: Main gRPC server interface
    - Entry point for the application
-   - Handles user messages, commands (/start, /help, /echo)
-   - PDF document handling with automatic download
+   - Handles client messages via gRPC streaming
+   - PDF and image document handling
    - Integrates with ConversationAgent for AI-powered responses
    - Manages MCP server lifecycle (startup/shutdown)
-   - Uses MarkdownV2 parsing for message formatting
+   - Session management for multiple concurrent clients
 
 2. **src/agents/**: Agent implementations organized by responsibility
    - **base_agent.py**: Abstract base class for all agents
@@ -64,7 +64,7 @@ pre-commit run --all-files
      - Works in conjunction with ConversationAgent for browser tasks
    - **page_analysis_agent.py**: Analyzes web page structure and content
      - Performs goal-aware filtering of interactable elements based on current task
-     - Takes screenshots and sends them via Telegram
+     - Takes screenshots and sends them to clients
      - Extracts structured information from web pages using accessibility tree
      - Returns formatted summaries with relevant UI elements for the given goal
 
@@ -80,7 +80,7 @@ The system uses multiple MCP servers:
 ### Environment Configuration
 
 Required environment variables (.env):
-- `TELEGRAM_TOKEN`: Telegram bot authentication token
+- `GRPC_PORT`: Port for gRPC server (default: 50051)
 - `ANTHROPIC_API_KEY`: Anthropic API key for Claude models (optional)
 - `OPENROUTER_API_KEY`: API key for OpenRouter (optional)
 - `GEMINI_API_KEY`: Google Gemini API key (optional)
@@ -104,15 +104,15 @@ The system supports multiple AI providers:
 - **Multi-Agent Architecture**: Separate agents for general tasks and browser-specific operations
 - **Conversation Memory**: Maintains context across interactions using message history
 - **Browser Automation**: Full web browser control through natural language
-- **PDF Processing**: Automatic handling of PDF documents sent via Telegram
+- **PDF Processing**: Automatic handling of PDF documents sent via gRPC
 - **Persistent Memory**: AI can store and retrieve information across sessions
 - **Streaming Responses**: Yields intermediate results for real-time feedback
 - **Comprehensive Logging**: Colored console output and file logging with Logfire integration
 
 ### Message Flow
 
-1. User sends message/document to Telegram bot
-2. TelegramBot receives and forwards to ConversationAgent
+1. User sends message/document to gRPC server
+2. gRPC server receives and forwards to ConversationAgent
 3. ConversationAgent processes with appropriate MCP servers
 4. For browser tasks, delegates to BrowserAgent via browser_interact tool
 5. Results (text/images) are streamed back to user
@@ -121,7 +121,7 @@ The system supports multiple AI providers:
 ### Development Tools
 
 - **Task Runner**: Uses `mise` for task management (see mise.toml)
-  - `mise run telegram_bot` - Run the Telegram bot
+  - `mise run grpc-server` - Run the gRPC server
   - `mise run conversation_agent` - Run the Conversation Agent standalone
   
 - **Package Manager**: Uses `uv` for Python dependency management
@@ -182,10 +182,10 @@ The system supports multiple AI providers:
    pre-commit install
    ```
 
-3. **Telegram Bot Setup**:
-   - Create a bot via [@BotFather](https://t.me/botfather)
-   - Get your bot token and add to TELEGRAM_TOKEN in .env
-   - Start the bot with `uv run python src/telegram_bot.py`
+3. **gRPC Server Setup**:
+   - Configure GRPC_PORT in .env (default: 50051)
+   - Start the server with `uv run grpc-server`
+   - Connect clients to the gRPC endpoint
 
 ### Common Issues and Solutions
 
@@ -207,4 +207,4 @@ When making changes:
 1. Follow existing code patterns and conventions
 2. Run linting and type checking before committing
 3. Update this CLAUDE.md file if adding new features or changing architecture
-4. Test both Telegram bot and standalone agent modes
+4. Test both gRPC server and standalone agent modes

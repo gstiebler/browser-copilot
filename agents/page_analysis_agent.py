@@ -89,7 +89,7 @@ class PageAnalysisAgent(BaseAgent):
         )
 
         # Set up messaging tools from base class
-        # Note: Tools are set up via base class _setup_telegram_tools() method
+        # Note: Tools are set up via base class _setup_messaging_tools() method
 
     async def capture_page_snapshot(self, goal_summary: str, usage: Any = None) -> str:
         """
