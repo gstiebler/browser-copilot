@@ -1,15 +1,16 @@
-import os
 import logging
-from logging.handlers import RotatingFileHandler
+import os
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Optional
+
 from rich.console import Console
 from rich.markdown import Markdown
-from pathlib import Path
 
 # Try to import agent config, but make it optional
 try:
-    from agents.model_config import AgentConfig
+    from src.config import AgentConfig
 
     _config: Optional[AgentConfig] = AgentConfig.from_env()
 except ImportError:

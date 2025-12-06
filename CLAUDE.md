@@ -18,12 +18,12 @@ uv run rest-server
 mise run rest-server
 
 # Test the conversation agent
-uv run python src/agents/conversation_agent.py
+uv run python -m agents.conversation_agent
 # Or use mise task runner
 mise run conversation_agent
 
 # Test the browser interaction agent standalone
-uv run python src/agents/browser_interaction_agent.py
+uv run python -m agents.browser_interaction_agent
 
 # Run linting
 uv run ruff check .
@@ -51,7 +51,7 @@ pre-commit run --all-files
    - Manages MCP server lifecycle (startup/shutdown)
    - Session management for multiple concurrent clients
 
-2. **src/agents/**: Agent implementations organized by responsibility
+2. **agents/**: Agent implementations organized by responsibility
    - **base_agent.py**: Abstract base class for all agents
    - **conversation_agent.py**: Main AI agent that manages conversation history
      - Integrates multiple MCP servers (calculator, browser, PDF, memory, filesystem)
@@ -67,6 +67,11 @@ pre-commit run --all-files
      - Takes screenshots and sends them to clients
      - Extracts structured information from web pages using accessibility tree
      - Returns formatted summaries with relevant UI elements for the given goal
+
+3. **src/config/**: Configuration module with Pydantic models and provider logic
+   - **agent_models.py**: Pydantic configuration models (AgentConfig, BrowserAgentConfig, PageAnalysisConfig)
+   - **model_provider.py**: AI model provider factory (get_model function)
+   - Centralized configuration for all agents and server components
 
 ### MCP Server Integration
 
@@ -154,7 +159,9 @@ The system supports multiple AI providers:
 ### Utility Modules
 
 - **src/node_utils.py**: Helper for printing MCP response nodes
-- **src/model_config.py**: Centralized model configuration and provider selection
+- **src/config/**: Centralized configuration module
+  - **agent_models.py**: Pydantic configuration models
+  - **model_provider.py**: AI model provider selection and instantiation
 - **src/log_config.py**: Logging setup with Rich console formatting
 - **src/input_utils.py**: Debug utilities for pausing execution
 
@@ -207,4 +214,15 @@ When making changes:
 1. Follow existing code patterns and conventions
 2. Run linting and type checking before committing
 3. Update this CLAUDE.md file if adding new features or changing architecture
-4. Test both gRPC server and standalone agent modes
+4. Test both REST server and standalone agent modes
+5. Run tests to ensure nothing breaks: `mise run test`
+
+### Code Organization
+
+- **src/**: Server infrastructure, utilities, and configuration
+  - REST server, SSE streaming, logging, config models
+- **agents/**: AI agent implementations
+  - All agent logic and MCP server integration
+- **tests/**: Test suite with unit and integration tests
+  - Run with `mise run test` or `uv run pytest`
+- **chat-client/**: Streamlit web UI (separate application)

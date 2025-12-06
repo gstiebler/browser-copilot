@@ -36,11 +36,18 @@ package = true
 dev = [
     "mypy>=1.16.1",
     "pre-commit>=4.2.0",
+    "pytest>=9.0.1",
     "ruff>=0.12.2",
 ]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+select = ["I"]  # Enable isort rules for import sorting
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "agents"]
 
 [tool.mypy]
 python_version = "3.13"

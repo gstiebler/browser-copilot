@@ -1,9 +1,10 @@
 from abc import ABC
 from typing import Optional
-from pydantic_ai import Agent, RunContext
-from src.sse_message_sender import SSEMessageSender
-from src.log_config import setup_logging
 
+from pydantic_ai import Agent, RunContext
+
+from src.log_config import setup_logging
+from src.sse_message_sender import SSEMessageSender
 
 logger = setup_logging(__name__)
 

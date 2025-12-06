@@ -1,6 +1,7 @@
 """Pydantic model configuration for agents."""
 
 import os
+
 from pydantic import BaseModel, ConfigDict, field_validator
 
 

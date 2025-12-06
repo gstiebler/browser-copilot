@@ -1,19 +1,21 @@
 """Utilities for processing Pydantic AI nodes and displaying their content."""
 
 import json
+
 import black
 import logfire
 from pydantic_ai import CallToolsNode, ModelRequestNode, UserPromptNode
 from pydantic_ai.messages import (
     RetryPromptPart,
+    SystemPromptPart,
     TextPart,
-    ToolReturnPart,
     ThinkingPart,
     ToolCallPart,
+    ToolReturnPart,
     UserPromptPart,
-    SystemPromptPart,
 )
 from pydantic_graph import End
+
 from .log_config import console, log_markdown
 
 

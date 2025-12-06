@@ -5,10 +5,9 @@ import json
 import uuid
 
 import requests
-import streamlit as st
 import sseclient
-from model_config import StreamlitConfig, ChatClientConfig
-
+import streamlit as st
+from model_config import ChatClientConfig, StreamlitConfig
 
 # Load configuration from environment
 streamlit_config = StreamlitConfig.from_env()

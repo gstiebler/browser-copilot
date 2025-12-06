@@ -1,18 +1,18 @@
-from typing import List, Any, Optional
 import logging
+from typing import Any, List, Optional
+
+import logfire
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
-import logfire
 
-from src.log_config import setup_logging, log_markdown
+from src.config import AgentConfig, get_model
+from src.log_config import log_markdown, setup_logging
+from src.sse_message_sender import SSEMessageSender
+
+from .base_agent import BaseAgent
 from .browser_interaction_agent import BrowserInteractionAgent
 from .page_analysis_agent import PageAnalysisAgent
-from src.model_config import get_model
-from .base_agent import BaseAgent
-from src.sse_message_sender import SSEMessageSender
-from .model_config import AgentConfig
-
 
 # Load configuration from environment
 config = AgentConfig.from_env()

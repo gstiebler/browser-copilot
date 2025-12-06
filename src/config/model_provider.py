@@ -1,12 +1,13 @@
-import os
 import logging
+import os
+
 from pydantic_ai.models import Model
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings, ThinkingConfig
 from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.providers.google_gla import GoogleGLAProvider
+from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings, ThinkingConfig
+from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
+from pydantic_ai.providers.google_gla import GoogleGLAProvider
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 logger = logging.getLogger(__name__)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
