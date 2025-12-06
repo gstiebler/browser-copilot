@@ -20,7 +20,7 @@ A gRPC service that uses AI agents to interact with web browsers on behalf of us
 - Python 3.13+ (see `.python-version`)
 - [uv](https://docs.astral.sh/uv/) package manager
 - Node.js 20+ (for MCP servers)
-- [mise](https://mise.jdx.dev/) (optional, for task running)
+- [just](https://github.com/casey/just) (optional, for task running)
 
 ### Installation
 
@@ -78,11 +78,11 @@ uv run grpc-server
 # Or directly
 uv run python src/grpc_server.py
 
-# Using mise
-mise run grpc-server
+# Using just
+just grpc-server
 
 # Development mode (with debug logging)
-mise run dev
+just dev
 ```
 
 ### gRPC API
@@ -168,13 +168,13 @@ uv run ruff check .
 uv run ruff format .
 
 # Type checking
-uv run mypy .
+uv run pyright .
 
 # Run all quality checks
-mise run check
+just check
 
 # Clean cache files
-mise run clean
+just clean
 ```
 
 ### Project Structure
@@ -202,7 +202,7 @@ proto/
 ### Code Quality
 
 - **Linting**: `ruff` for code formatting and style
-- **Type Checking**: `mypy` for static type analysis  
+- **Type Checking**: `pyright` for static type analysis
 - **Pre-commit**: Git hooks for automated quality checks
 
 ## Debugging
@@ -220,7 +220,7 @@ FILE_LOG_LEVEL=DEBUG         # Detailed file logging
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run quality checks: `mise run check`
+4. Run quality checks: `just check`
 5. Submit a pull request
 
 ## Support

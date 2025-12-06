@@ -34,7 +34,7 @@ package = true
 
 [dependency-groups]
 dev = [
-    "mypy>=1.16.1",
+    "pyright>=1.1.390",
     "pre-commit>=4.2.0",
     "pytest>=9.0.1",
     "ruff>=0.12.2",
@@ -49,19 +49,13 @@ select = ["I"]  # Enable isort rules for import sorting
 [tool.ruff.lint.isort]
 known-first-party = ["browser_copilot"]
 
-[tool.mypy]
-python_version = "3.13"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-ignore_missing_imports = false
-mypy_path = "src"
-
-# Suppress import-untyped warnings for third-party libraries without type stubs
-[[tool.mypy.overrides]]
-module = [
-    "sseclient",
-    "uvicorn.*",
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false
+include = ["src", "tests"]
+exclude = [
+    "**/__pycache__",
+    ".venv"
 ]
-ignore_missing_imports = true
-ignore_errors = true

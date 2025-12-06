@@ -13,7 +13,7 @@ wheels/
 .claude
 .envrc
 .serena
-.mypy_cache
+.pyright
 .ruff_cache
 log
 markdown_logs

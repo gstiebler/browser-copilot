@@ -26,7 +26,7 @@ First, ensure the gRPC server is running:
 # From project root
 uv run grpc-server
 # Or
-mise run grpc-server
+just grpc-server
 ```
 
 The server will start on `localhost:50051` by default.
@@ -37,8 +37,8 @@ The server will start on `localhost:50051` by default.
 # From project root
 uv run streamlit run chat-client/app.py
 
-# Or using mise
-mise run streamlit run chat-client/app.py
+# Or using just
+just streamlit run chat-client/app.py
 ```
 
 The application will open in your default web browser at `http://localhost:8501`.

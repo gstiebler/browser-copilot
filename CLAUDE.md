@@ -14,13 +14,13 @@ uv sync
 
 # Run the REST server (main entry point)
 uv run rest-server
-# Or use mise task runner
-mise run rest-server
+# Or use just task runner
+just rest-server
 
 # Test the conversation agent
 uv run python -m agents.conversation_agent
-# Or use mise task runner
-mise run conversation_agent
+# Or use just task runner
+just conversation_agent
 
 # Test the browser interaction agent standalone
 uv run python -m agents.browser_interaction_agent
@@ -30,7 +30,7 @@ uv run ruff check .
 uv run ruff format .
 
 # Run type checking
-uv run mypy .
+uv run pyright .
 
 # Run tests
 uv run pytest
@@ -125,10 +125,11 @@ The system supports multiple AI providers:
 
 ### Development Tools
 
-- **Task Runner**: Uses `mise` for task management (see mise.toml)
-  - `mise run rest-server` - Run the REST server
-  - `mise run conversation_agent` - Run the Conversation Agent standalone
-  
+- **Task Runner**: Uses `just` for task management (see justfile)
+  - `just rest-server` - Run the REST server
+  - `just conversation_agent` - Run the Conversation Agent standalone
+  - `just --list` - Show all available tasks
+
 - **Package Manager**: Uses `uv` for Python dependency management
   - Fast, Rust-based package installer
   - Manages virtual environments automatically
@@ -136,7 +137,7 @@ The system supports multiple AI providers:
 
 - **Code Quality**:
   - `ruff`: Fast Python linter and formatter
-  - `mypy`: Static type checking
+  - `pyright`: Static type checking
   - `pre-commit`: Git hooks for code quality checks
 
 ### Debugging Features
@@ -170,7 +171,7 @@ The system supports multiple AI providers:
 1. **Prerequisites**:
    - Python 3.11+ (see .python-version)
    - uv package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
-   - mise (optional, for task running)
+   - just (optional, for task running: `cargo install just` or see https://github.com/casey/just)
 
 2. **Initial Setup**:
    ```bash
@@ -215,7 +216,7 @@ When making changes:
 2. Run linting and type checking before committing
 3. Update this CLAUDE.md file if adding new features or changing architecture
 4. Test both REST server and standalone agent modes
-5. Run tests to ensure nothing breaks: `mise run test`
+5. Run tests to ensure nothing breaks: `just test`
 
 ### Code Organization
 
@@ -224,5 +225,5 @@ When making changes:
 - **agents/**: AI agent implementations
   - All agent logic and MCP server integration
 - **tests/**: Test suite with unit and integration tests
-  - Run with `mise run test` or `uv run pytest`
+  - Run with `just test` or `uv run pytest`
 - **chat-client/**: Streamlit web UI (separate application)
