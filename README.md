@@ -184,7 +184,7 @@ src/
 │   │   ├── agent_models.py
 │   │   └── model_provider.py
 │   └── ...              # Other utilities
-chat-client/             # Streamlit web UI
+src/chat-client/         # Streamlit web UI
 └── app.py               # Chat interface
 ```
 

@@ -226,4 +226,4 @@ When making changes:
   - All agent logic and MCP server integration
 - **tests/**: Test suite with unit and integration tests
   - Run with `just test` or `uv run pytest`
-- **chat-client/**: Streamlit web UI (separate application)
+- **src/chat-client/**: Streamlit web UI (separate application)

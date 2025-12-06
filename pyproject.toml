@@ -58,5 +58,5 @@ include = ["src", "tests"]
 exclude = [
     "**/__pycache__",
     ".venv",
-    "chat-client"
+    "src/chat-client"
 ]

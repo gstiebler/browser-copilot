@@ -35,10 +35,10 @@ The server will start on `localhost:8000` by default.
 
 ```bash
 # From project root
-uv run streamlit run chat-client/app.py
+uv run streamlit run src/chat-client/app.py
 
 # Or using just
-just streamlit run chat-client/app.py
+just streamlit run src/chat-client/app.py
 ```
 
 The application will open in your default web browser at `http://localhost:8501`.
@@ -73,5 +73,5 @@ The chat client uses:
 - `requests` for HTTP communication
 - `sseclient-py` for Server-Sent Events streaming
 
-To modify the client, edit `chat-client/app.py`.
+To modify the client, edit `src/chat-client/app.py`.
 
