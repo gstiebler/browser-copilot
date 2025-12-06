@@ -3,7 +3,7 @@ from typing import Optional
 
 # Try to import agent config, but make it optional
 try:
-    from src.config import AgentConfig
+    from ..config import AgentConfig
 
     _config: Optional[AgentConfig] = AgentConfig.from_env()
 except ImportError:

@@ -5,13 +5,10 @@ import black
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 
-from src.config import AgentConfig
-from src.input_utils import wait_for_input
-from src.log_config import log_markdown, setup_logging
-from src.node_utils import print_node
-from src.sse_message_sender import SSEMessageSender
-
-from .base_agent import BaseAgent
+from ..api.sse import SSEMessageSender
+from ..config import AgentConfig, log_markdown, setup_logging
+from ..utils import print_node, wait_for_input
+from .base import BaseAgent
 
 # Load configuration from environment
 config = AgentConfig.from_env()

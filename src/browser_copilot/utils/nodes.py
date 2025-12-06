@@ -16,7 +16,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_graph import End
 
-from .log_config import console, log_markdown
+from ..config.logging import console, log_markdown
 
 
 def print_node(node, indent: int) -> None:

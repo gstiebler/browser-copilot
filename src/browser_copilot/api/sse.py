@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from .log_config import setup_logging
+from ..config import setup_logging
 
 logger = setup_logging(__name__)
 

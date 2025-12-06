@@ -10,7 +10,7 @@ from rich.markdown import Markdown
 
 # Try to import agent config, but make it optional
 try:
-    from src.config import AgentConfig
+    from .models import AgentConfig
 
     _config: Optional[AgentConfig] = AgentConfig.from_env()
 except ImportError:

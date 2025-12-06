@@ -3,8 +3,8 @@ from typing import Optional
 
 from pydantic_ai import Agent, RunContext
 
-from src.log_config import setup_logging
-from src.sse_message_sender import SSEMessageSender
+from ..api.sse import SSEMessageSender
+from ..config import setup_logging
 
 logger = setup_logging(__name__)
 

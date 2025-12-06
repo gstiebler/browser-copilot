@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.config import AgentConfig, BrowserAgentConfig, get_model
+from browser_copilot.config import AgentConfig, BrowserAgentConfig, get_model
 
 
 def test_agent_config_defaults():

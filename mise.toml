@@ -12,7 +12,7 @@ _.python.venv = { path = ".venv", create = true }
 PYTHONPATH = "."
 
 [tasks.conversation_agent]
-run = "uv run -m src.agents.conversation_agent"
+run = "uv run python -m browser_copilot.agents.conversation"
 description = "Run the Conversation Agent standalone"
 
 [tasks.rest-server]
@@ -20,7 +20,7 @@ run = "uv run rest-server"
 description = "Run the REST server (main entry point)"
 
 [tasks.browser_agent]
-run = "uv run -m src.agents.browser_interaction_agent"
+run = "uv run python -m browser_copilot.agents.browser_interaction"
 description = "Test the browser interaction agent standalone"
 
 [tasks.lint]
@@ -28,7 +28,7 @@ run = "uv run ruff check . && uv run ruff format ."
 description = "Run linting and formatting"
 
 [tasks.typecheck]
-run = "uv run mypy ."
+run = "uv run mypy src tests"
 description = "Run type checking"
 
 [tasks.test]

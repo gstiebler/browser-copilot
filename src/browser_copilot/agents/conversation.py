@@ -6,13 +6,11 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.messages import ModelMessage
 
-from src.config import AgentConfig, get_model
-from src.log_config import log_markdown, setup_logging
-from src.sse_message_sender import SSEMessageSender
-
-from .base_agent import BaseAgent
-from .browser_interaction_agent import BrowserInteractionAgent
-from .page_analysis_agent import PageAnalysisAgent
+from ..api.sse import SSEMessageSender
+from ..config import AgentConfig, get_model, log_markdown, setup_logging
+from .base import BaseAgent
+from .browser_interaction import BrowserInteractionAgent
+from .page_analysis import PageAnalysisAgent
 
 # Load configuration from environment
 config = AgentConfig.from_env()

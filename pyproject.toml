@@ -19,15 +19,15 @@ dependencies = [
 ]
 
 [project.scripts]
-rest-server = "src.rest_server:main"
+rest-server = "browser_copilot.api.server:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
+where = ["src"]
+include = ["browser_copilot*"]
 
 [tool.uv]
 package = true
@@ -47,7 +47,7 @@ line-length = 100
 select = ["I"]  # Enable isort rules for import sorting
 
 [tool.ruff.lint.isort]
-known-first-party = ["src", "agents"]
+known-first-party = ["browser_copilot"]
 
 [tool.mypy]
 python_version = "3.13"
@@ -55,6 +55,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = false
+mypy_path = "src"
 
 # Suppress import-untyped warnings for third-party libraries without type stubs
 [[tool.mypy.overrides]]

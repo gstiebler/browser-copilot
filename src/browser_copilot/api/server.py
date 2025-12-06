@@ -12,11 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from agents.conversation_agent import ConversationAgent
-from src.config import AgentConfig
-
-from .log_config import setup_logging
-from .sse_message_sender import SSEMessageSender
+from ..agents import ConversationAgent
+from ..config import AgentConfig, setup_logging
+from .sse import SSEMessageSender
 
 # Set up module logger
 logger = setup_logging(__name__)
