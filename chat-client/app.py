@@ -28,13 +28,11 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
 if "server_url" not in st.session_state:
-    # Convert gRPC address to REST URL
-    grpc_address = client_config.server_address
-    if ":" in grpc_address:
-        host, port = grpc_address.rsplit(":", 1)
-        # Default to port 8000 for REST API if gRPC port was 50051
-        rest_port = "8000" if port == "50051" else str(int(port) + 1000)
-        st.session_state.server_url = f"http://{host}:{rest_port}"
+    # Initialize server URL from config or use default
+    server_address = client_config.server_address
+    if ":" in server_address:
+        host, port = server_address.rsplit(":", 1)
+        st.session_state.server_url = f"http://{host}:{port}"
     else:
         st.session_state.server_url = "http://localhost:8000"
 

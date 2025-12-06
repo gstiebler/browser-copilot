@@ -1,13 +1,13 @@
 # Browser Copilot
 
-A gRPC service that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
+A REST API service with Server-Sent Events (SSE) that uses AI agents to interact with web browsers on behalf of users. It leverages MCP (Model Context Protocol) servers and Pydantic AI to perform browser automation tasks through natural language commands.
 
 ## Features
 
 - 🤖 **AI-Powered Browser Automation**: Control web browsers using natural language
-- 🔌 **gRPC API**: High-performance RPC interface with server-side streaming
+- 🔌 **REST API with SSE**: Real-time streaming responses via Server-Sent Events
 - 🏗️ **Multi-Agent Architecture**: Specialized agents for different tasks
-- 📄 **PDF Processing**: Automatic handling of PDF documents
+- 📄 **PDF Processing**: Automatic handling of PDF documents via file upload
 - 🧠 **Persistent Memory**: AI remembers context across sessions
 - 📸 **Screenshot Capture**: Visual feedback from browser interactions
 - 🌐 **Multiple AI Providers**: Support for Anthropic, OpenRouter, and Google Gemini
@@ -35,14 +35,7 @@ A gRPC service that uses AI agents to interact with web browsers on behalf of us
    uv sync
    ```
 
-3. **Generate gRPC proto files**
-   ```bash
-   ./generate_proto.sh
-   # Or manually:
-   python -m grpc_tools.protoc -I proto --python_out=proto --grpc_python_out=proto proto/browser_copilot.proto
-   ```
-
-4. **Set up environment**
+3. **Set up environment**
    ```bash
    cp .env.example .env
    # Edit .env with your API keys
@@ -64,59 +57,58 @@ BROWSER_MODEL=model_name                  # Browser automation model
 
 # Optional
 TEMPDIR=/tmp                              # Temporary files directory
-GRPC_PORT=50051                           # gRPC server port (default: 50051)
+REST_PORT=8000                            # REST API server port (default: 8000)
 ```
 
 ## Usage
 
-### Start the gRPC Server
+### Start the REST Server
 
 ```bash
 # Using uv
-uv run grpc-server
-
-# Or directly
-uv run python src/grpc_server.py
+uv run rest-server
 
 # Using just
-just grpc-server
+just rest-server
 
 # Development mode (with debug logging)
 just dev
 ```
 
-### gRPC API
+### REST API with SSE
 
-The service exposes a gRPC API with server-side streaming. Example client usage:
+The service exposes a REST API with Server-Sent Events (SSE) for streaming responses. Example client usage:
 
 ```python
-import sys
-from pathlib import Path
-import grpc
+import requests
+import sseclient
 
-# Ensure generated modules are on the Python path when running from the repo
-sys.path.append(str(Path(__file__).resolve().parent / "proto"))
-
-import browser_copilot_pb2 as pb2
-import browser_copilot_pb2_grpc as pb2_grpc
-
-# Connect to server
-channel = grpc.insecure_channel('localhost:50051')
-stub = pb2_grpc.BrowserCopilotServiceStub(channel)
+# Server configuration
+server_url = "http://localhost:8000"
+session_id = "my-session-123"
 
 # Send a message
-request = pb2.SendMessageRequest(
-    session_id="my-session-123",
-    message_type=pb2.MessageType.TEXT,
-    content="Navigate to example.com"
+message_data = {
+    "message_type": "TEXT",
+    "content": "Navigate to example.com"
+}
+
+response = requests.post(
+    f"{server_url}/api/v1/sessions/{session_id}/messages",
+    json=message_data,
+    headers={"Accept": "text/event-stream"},
+    stream=True
 )
 
-# Stream responses
-for response in stub.SendMessage(request):
-    if response.text:
-        print(f"Text: {response.text}")
-    elif response.image:
-        print(f"Image: {response.image.file_path}")
+# Stream SSE responses
+client = sseclient.SSEClient(response.iter_content())
+for event in client.events():
+    if event.event == "text":
+        print(f"Text: {event.data}")
+    elif event.event == "image":
+        print(f"Image: {event.data}")
+    elif event.event == "complete":
+        break
 ```
 
 ### Message Types
@@ -129,24 +121,23 @@ for response in stub.SendMessage(request):
 
 ```bash
 # Test conversation agent
-uv run python src/dev/console_chatbot.py
+just conversation_agent
 
 # Test browser interaction agent
-uv run python src/agents/browser_interaction_agent.py
+just browser_agent
 ```
 
 ## Architecture
 
 ### Core Components
 
-- **`src/grpc_server.py`**: Main gRPC server implementation
-- **`src/grpc_message_sender.py`**: Message streaming handler
-- **`proto/browser_copilot.proto`**: gRPC service definition
+- **`src/api/server.py`**: Main REST API server with SSE streaming
 - **`src/agents/`**: AI agent implementations
-  - `conversation_agent.py`: Main orchestrator agent
-  - `browser_interaction_agent.py`: Browser automation specialist
-  - `page_analysis_agent.py`: Web page analysis and extraction
-  - `base_agent.py`: Abstract base class for all agents
+  - `conversation.py`: Main orchestrator agent
+  - `browser_interaction.py`: Browser automation specialist
+  - `page_analysis.py`: Web page analysis and extraction
+  - `base.py`: Abstract base class for all agents
+- **`src/config/`**: Configuration module with Pydantic models
 
 ### MCP Servers
 
@@ -181,22 +172,20 @@ just clean
 
 ```
 src/
-├── agents/              # AI agent implementations
-│   ├── __init__.py
-│   ├── base_agent.py
-│   ├── conversation_agent.py
-│   ├── browser_interaction_agent.py
-│   └── page_analysis_agent.py
-├── dev/                 # Development utilities
-├── grpc_server.py       # Main gRPC server entry point
-├── grpc_message_sender.py  # Message streaming handler
-├── model_config.py      # AI model configuration
-├── log_config.py        # Logging setup
-└── ...                  # Other utilities
-proto/
-├── browser_copilot.proto    # gRPC service definition
-├── browser_copilot_pb2.py  # Generated message classes
-└── browser_copilot_pb2_grpc.py  # Generated service classes
+├── browser_copilot/
+│   ├── agents/          # AI agent implementations
+│   │   ├── base.py
+│   │   ├── conversation.py
+│   │   ├── browser_interaction.py
+│   │   └── page_analysis.py
+│   ├── api/             # REST API server
+│   │   └── server.py    # FastAPI server with SSE streaming
+│   ├── config/          # Configuration module
+│   │   ├── agent_models.py
+│   │   └── model_provider.py
+│   └── ...              # Other utilities
+chat-client/             # Streamlit web UI
+└── app.py               # Chat interface
 ```
 
 ### Code Quality
