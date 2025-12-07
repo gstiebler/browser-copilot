@@ -256,10 +256,6 @@ class ConversationAgent(BaseAgent):
             if result is not None:
                 self.message_history = result.all_messages()
 
-                # Log the output for debugging
-                if hasattr(result, "output") and result.output:
-                    logger.debug(f"Agent output: {result.output}")
-
     def get_messages(self) -> List[ModelMessage]:
         """Get the complete conversation history."""
         return self.message_history.copy()
