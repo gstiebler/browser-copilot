@@ -60,3 +60,5 @@ exclude = [
     ".venv",
     "src/chat-client"
 ]
+venvPath = "."
+venv = ".venv"
