@@ -72,7 +72,6 @@ class PageAnalysisAgent(BaseAgent):
         Args:
             message_sender: The SSEMessageSender instance
             model: The AI model to use
-            mcp_servers: List of MCP servers
             playwright_server: The Playwright MCP server instance for direct screenshot calls
         """
         super().__init__(message_sender)

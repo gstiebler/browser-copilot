@@ -75,13 +75,13 @@ Separate these sections clearly in your response.
 class BrowserInteractionAgent(BaseAgent):
     """An agent specifically for browser interaction and automation tasks."""
 
-    def __init__(self, message_sender: SSEMessageSender, model, mcp_servers):
+    def __init__(self, message_sender: SSEMessageSender, model, toolsets):
         """Initialize the browser interaction agent.
 
         Args:
             message_sender: The SSEMessageSender instance
             model: The AI model to use
-            mcp_servers: List of MCP servers (typically Playwright and Memory servers)
+            toolsets: List of toolsets (typically Playwright and Memory servers)
         """
         super().__init__(message_sender)
         self.model = model
@@ -89,7 +89,7 @@ class BrowserInteractionAgent(BaseAgent):
         # Initialize the agent with browser interaction system prompt
         self.agent = Agent(
             self.model,
-            mcp_servers=mcp_servers,
+            toolsets=toolsets,
             system_prompt=system_prompt,
             name="BrowserInteractionAgent",
         )

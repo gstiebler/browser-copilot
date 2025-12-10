@@ -90,7 +90,7 @@ class ConversationAgent(BaseAgent):
         )
 
         # Collect all servers for the main agent
-        mcp_servers = [
+        toolsets = [
             self.calculator_server,
             self.pdf_server,
             # self.memory_server,
@@ -100,10 +100,10 @@ class ConversationAgent(BaseAgent):
         # Initialize the model
         self.model = get_model(config.main_model_name)
 
-        # Initialize the agent with MCP server
+        # Initialize the agent with toolsets
         self.agent = Agent(
             self.model,
-            mcp_servers=mcp_servers,
+            toolsets=toolsets,
             system_prompt=system_prompt,
             name="ConversationAgent",
         )
@@ -197,9 +197,9 @@ class ConversationAgent(BaseAgent):
         browser_model = get_model(config.browser_model_name)
 
         # Browser interaction agent gets both Playwright and Memory servers
-        interaction_mcp_servers = [self.playwright_server]  # , self.memory_server]
+        interaction_toolsets = [self.playwright_server]  # , self.memory_server]
         self.browser_interaction_agent = BrowserInteractionAgent(
-            self.message_sender, browser_model, interaction_mcp_servers
+            self.message_sender, browser_model, interaction_toolsets
         )
 
         self.page_analysis_agent = PageAnalysisAgent(
