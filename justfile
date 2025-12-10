@@ -10,6 +10,10 @@ conversation_agent:
 rest-server:
     uv run rest-server
 
+# Run the Streamlit chat client
+chat-client:
+    uv run streamlit run src/chat-client/app.py
+
 # Test the browser interaction agent standalone
 browser_agent:
     uv run python -m browser_copilot.agents.browser_interaction
